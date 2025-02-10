@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.library.core.view.layout.BaseConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/default_popup_background"
+    android:clickable="true"
+    android:focusable="true">
+
+    <com.library.core.view.layout.BaseConstraintLayout
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:background="@drawable/bg_solid_white_radius_8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:lottie_autoPlay="true"
+            app:lottie_colorFilter="@color/blue_haze"
+            app:lottie_loop="true"
+            app:lottie_rawRes="@raw/loading_indicator" />
+
+    </com.library.core.view.layout.BaseConstraintLayout>
+
+</com.library.core.view.layout.BaseConstraintLayout>

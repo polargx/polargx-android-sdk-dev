@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.library.core.view.layout.BaseConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:id="@+id/viewBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/default_popup_background"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.library.core.view.layout.BaseConstraintLayout
+        android:id="@+id/cslContent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.library.core.view.text_view.BaseTextView
+            android:id="@+id/tvTitle"
+            style="@style/BaseTextView"
+            android:layout_marginBottom="12dp"
+            android:fontFamily="@font/josefinsans_regular"
+            android:gravity="center"
+            android:textColor="@color/secondaryTextColor"
+            android:textSize="20sp"
+            app:layout_constraintBottom_toTopOf="@id/tvMessage"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="Title" />
+
+        <com.library.core.view.text_view.BaseTextView
+            android:id="@+id/tvMessage"
+            style="@style/BaseTextView"
+            android:layout_marginBottom="24dp"
+            android:fontFamily="@font/josefinsans_regular"
+            android:gravity="center"
+            android:textColor="@color/secondaryTextColor"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@id/btnPositive"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:text="Message" />
+
+        <com.library.core.view.button.BaseButton
+            android:id="@+id/btnPositive"
+            style="@style/PrimaryButton"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toTopOf="@id/btnNegative"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="Action" />
+
+        <com.library.core.view.button.BaseButton
+            android:id="@+id/btnNegative"
+            style="@style/PrimaryButton"
+            android:text="cancel"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    </com.library.core.view.layout.BaseConstraintLayout>
+
+</com.library.core.view.layout.BaseConstraintLayout>

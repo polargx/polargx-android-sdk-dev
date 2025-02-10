@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="transparent">#00000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="white_05">#0DFFFFFF</color>
+    <color name="white_15">#26FFFFFF</color>
+    <color name="white_25">#40FFFFFF</color>
+    <color name="white_35">#59FFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="black_10">#1A000000</color>
+    <color name="black_15">#26000000</color>
+    <color name="black_25">#40000000</color>
+    <color name="black_30">#4D000000</color>
+    <color name="black_35">#59000000</color>
+    <color name="black_50">#80000000</color>
+    <color name="silver">#FFBEBEBE</color>
+    <color name="purple_blue">#FF3F37C9</color>
+    <color name="purple_blue_35">#593F37C9</color>
+    <color name="purple_blue_50">#803F37C9</color>
+    <color name="light_purple">#FFF3F3FF</color>
+    <color name="nero">#FF1B1B1B</color>
+    <color name="nero_50">#801B1B1B</color>
+    <color name="turquoise">#FF30D5C7</color>
+    <color name="dark_orange">#FFFF8C00</color>
+
+    <color name="bunting">#FF2D334A</color>
+    <color name="bunting_50">#802D334A</color>
+    <color name="school_bus_yellow">#FFFFD803</color>
+    <color name="school_bus_yellow_50">#80FFD803</color>
+    <color name="pale_turquoise">#FFBAE8E8</color>
+    <color name="pale_turquoise_50">#80BAE8E8</color>
+    <color name="gainsboro">#FFDADADA</color>
+    <color name="light_cyan">#FFE3F6F5</color>
+    <color name="light_cyan_50">#80E3F6F5</color>
+    <color name="floral_white">#FFFCFBF7</color>
+    <color name="floral_white_10">#1AFCFBF7</color>
+    <color name="floral_white_35">#59FCFBF7</color>
+    <color name="light_grey">#FFCFCFCF</color>
+    <color name="light_grey1">#FFD5D5D5</color>
+    <color name="ivory">#FFFFFFFE</color>
+    <color name="white_smoke">#FFF5F5F5</color>
+    <color name="white_smoke_50">#80F5F5F5</color>
+    <color name="white_smoke2">#FFF2F2F2</color>
+    <color name="white_smoke2_10">#1AF2F2F2</color>
+    <color name="white_smoke2_35">#59F2F2F2</color>
+    <color name="white_smoke2_50">#80F2F2F2</color>
+    <color name="quartz">#FFD6D4E5</color>
+    <color name="quartz_30">#4DD6D4E5</color>
+    <color name="ghost_white">#FFF6F5FF</color>
+    <color name="suva_grey">#FF898989</color>
+    <color name="snow">#FFF9F9F9</color>
+    <color name="black_russian">#FF131027</color>
+    <color name="baltic_sea">#FF343A3F</color>
+    <color name="aqua_spring">#FFEBF9F5</color>
+    <color name="cruise">#FFC2EEE2</color>
+    <color name="red">#FF0000</color>
+    <color name="blue_haze">#FFBFBDD1</color>
+
+    <color name="whisper">#FFEEEEEE</color>
+    <color name="whisper1">#FFEAEAEA</color>
+    <color name="gallery">#FFF0F0F0</color>
+    <color name="mine_shaft">#FF303030</color>
+    <color name="alto">#FFD9D9D9</color>
+    <color name="scorpion">#FF575757</color>
+    <color name="alabaster">#FFFCFCFC</color>
+    <color name="athens_gray">#FFEFEFF0</color>
+    <color name="dusty_gray">#FF959595</color>
+    <color name="catskill_white">#FFF4F6FA</color>
+    <color name="mystic">#FFDEE3EE</color>
+    <color name="mystic_30">#4DDEE3EE</color>
+    <color name="mystic_35">#59DEE3EE</color>
+    <color name="mystic_50">#80DEE3EE</color>
+    <color name="aluminium">#FFACB1BD</color>
+    <color name="mirage">#FF201C39</color>
+    <color name="mirage_35">#59201C39</color>
+    <color name="mirage_50">#80201C39</color>
+    <color name="shamrock">#FF33C69F</color>
+    <color name="shamrock_30">#4D33C69F</color>
+    <color name="tuna">#FF3C3C43</color>
+    <color name="tuna_60">#993C3C43</color>
+    <color name="speech_blue">#FF5053CA</color>
+    <color name="speech_blue_35">#595053CA</color>
+    <color name="speech_blue_50">#805053CA</color>
+    <color name="provincial_pink">#FFE2D1</color>
+    <color name="provincial_pink_75">#BFFFE2D1</color>
+    <color name="alice_blue">#FFF8F9FB</color>
+    <color name="amour">#FFFEE6EC</color>
+    <color name="manatee">#FF90949F</color>
+    <color name="manatee_35">#5990949F</color>
+    <color name="manatee_50">#8090949F</color>
+    <color name="lavender_blush">#FFFFE6ED</color>
+    <color name="solitude_1">#FFE2EEFF</color>
+    <color name="solitude_2">#FFEFF1F7</color>
+    <color name="seashell">#FFF1F1F1</color>
+    <color name="concrete">#FFF3F3F3</color>
+    <color name="silver_chalice">#FFA5A5A5</color>
+    <color name="carnation">#FFF96551</color>
+    <color name="carnation_35">#59F96551</color>
+    <color name="carnation_50">#80F96551</color>
+    <color name="rose_white">#FFFFF2EF</color>
+    <color name="rose_white_35">#59FFF2EF</color>
+    <color name="rose_white_50">#80FFF2EF</color>
+    <color name="pippin">#FFFED8CF</color>
+    <color name="pippin_35">#59FED8CF</color>
+    <color name="pippin_50">#80FED8CF</color>
+    <color name="titan_white">#FFF0F0FF</color>
+    <color name="titan_white_20">#33F0F0FF</color>
+    <color name="bittersweet">#FFFC7D60</color>
+    <color name="bittersweet_35">#59FC7D60</color>
+    <color name="bittersweet_50">#80FC7D60</color>
+    <color name="sun">#FFFF8536</color>
+    <color name="mediumSlateBlue">#FF6E71E1</color>
+    <color name="jacksonsPurple">#FF2B2E97</color>
+    <color name="jacksonsPurple_50">#3A3C9B</color>
+    <color name="bombay">#FFADADB3</color>
+    <color name="storm_grey">#FF70778E</color>
+    <color name="jacarta">#FF282464</color>
+    <color name="indigo">#FF4B43CB</color>
+    <color name="lavender">#FFEDECFA</color>
+    <color name="lavender_35">#59EDECFA</color>
+    <color name="lavender_50">#80EDECFA</color>
+    <color name="link_water">#FFD2D5DC</color>
+
+    <color name="divider">@color/silver</color>
+    <color name="dark_status_bar_color">@color/transparent</color>
+    <color name="light_status_bar_color">@color/transparent</color>
+    <color name="default_popup_background">@color/black_25</color>
+
+    <color name="screenBackgroundColor">@color/white</color>
+
+    <!-- common color -->
+    <color name="defaultBackgroundColor">@color/alice_blue</color>
+    <color name="defaultStatusBarColor">@color/transparent</color>
+    <color name="textHeaderColor">@color/black</color>
+    <color name="textPrimaryColor">@color/black</color>
+    <color name="textSecondaryColor">@color/nero</color>
+
+
+    <color name="textTertiaryColor">@color/baltic_sea</color>
+    <color name="iconHeaderColor">@color/baltic_sea</color>
+    <color name="iconBackgroundColor">@color/snow</color>
+    <color name="cardPrimaryBackgroundColor">@color/ivory</color>
+    <color name="hintTextColor">@color/bunting_50</color>
+    <color name="borderColor">@color/nero_50</color>
+    <color name="surveyBorderColor">@color/black_25</color>
+
+    <color name="blue_whale">#FF023047</color>
+    <color name="blue_whale_35">#59023047</color>
+    <color name="blue_whale_50">#80023047</color>
+    <color name="seagull">#FF7BB7DB</color>
+    <color name="blanched_almond">#FFFEEBCD</color>
+
+    <!-- main -->
+    <color name="main_tab_selected_color">@color/speech_blue</color>
+    <color name="main_tab_unselected_color">@color/manatee</color>
+
+
+    <!-- icon -->
+    <color name="primaryIconColor">@color/blue_whale</color>
+    <color name="secondaryIconColor">@color/seagull</color>
+
+    <!-- text cursor -->
+    <color name="textCursorColor">@color/blue_whale</color>
+
+    <!-- text view -->
+    <color name="primaryTextColor">@color/blue_whale</color>
+    <color name="secondaryTextColor">@color/blanched_almond</color>
+
+</resources>

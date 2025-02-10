@@ -1,0 +1,38 @@
+<resources>
+
+    <!-- view -->
+    <declare-styleable name="BaseTextView"></declare-styleable>
+
+    <declare-styleable name="BaseButton"></declare-styleable>
+
+    <declare-styleable name="BaseEditText"></declare-styleable>
+
+    <declare-styleable name="BaseImageView"></declare-styleable>
+
+    <declare-styleable name="BaseImageButton"></declare-styleable>
+    <!-- view -->
+
+    <!-- scrollable view -->
+    <declare-styleable name="BaseRecyclerView"></declare-styleable>
+
+    <declare-styleable name="BaseScrollView"></declare-styleable>
+
+    <declare-styleable name="BaseNestedScrollView"></declare-styleable>
+
+    <declare-styleable name="BaseHorizontalScrollView"></declare-styleable>
+
+    <declare-styleable name="BaseViewPager"></declare-styleable>
+    <!-- view scrollable -->
+
+    <!-- view group -->
+    <declare-styleable name="BaseConstraintLayout"></declare-styleable>
+
+    <declare-styleable name="BaseRelativeLayout"></declare-styleable>
+
+    <declare-styleable name="BaseFrameLayout"></declare-styleable>
+
+    <declare-styleable name="BaseLinearLayout"></declare-styleable>
+    <!-- view group -->
+
+</resources>
+

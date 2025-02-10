@@ -1,0 +1,118 @@
+[versions]
+# @keep
+compileSdk = "35"
+minSdk = "27"
+targetSdk = "35"
+versionCode = "232490192"
+versionName = "0.1.0"
+
+agp = "8.7.0"
+kotlin = "2.0.0"
+googleServices = "4.4.2"
+firebaseCrashlytic = "3.0.2"
+
+multidex = "2.0.1"
+coreKtx = "1.15.0"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.9.3"
+compose-compiler = "1.5.12"
+composeBom = "2024.06.00"
+appcompat = "1.7.0"
+material = "1.12.0"
+
+window = "1.3.0"
+
+# Internet time
+kronosJava = "0.0.1-alpha09"
+kronosAndroid = "0.0.1-alpha09"
+
+# Firebase
+firebaseBOM = "33.1.2"
+
+# Ktor
+ktor = "2.3.7"
+kotlinx-serialization = "1.6.2"
+kotlinx-coroutines = "1.7.3"
+
+# Koin
+koin = "3.5.3"
+koin-compose = "3.5.3"
+
+# Animation
+lottie = "6.0.0"
+
+# Publish
+nexusPublish = "1.3.0"
+
+
+[libraries]
+multidex = { group = "androidx.multidex", name = "multidex", version.ref = "multidex" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
+
+# Views
+constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version = "2.2.0" }
+
+
+# Firebase
+#firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBOM" }
+#firebase-analytics-ktx = { group = "com.google.firebase", name = "firebase-analytics-ktx" }
+#firebase-inappmessaging-display-ktx = { group = "com.google.firebase", name = "firebase-inappmessaging-display-ktx" }
+#firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+#firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
+
+# Ktor
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-client-auth = { group = "io.ktor", name = "ktor-client-auth", version.ref = "ktor" }
+
+# Required for Ktor
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+
+# Koin
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin-compose" }
+koin-androidx-navigation = { group = "io.insert-koin", name = "koin-androidx-navigation", version.ref = "koin" }
+koin-ktor = { group = "io.insert-koin", name = "koin-ktor", version.ref = "koin" }
+koin-logger-slf4j = { group = "io.insert-koin", name = "koin-logger-slf4j", version.ref = "koin" }
+
+# Internet Time
+kronos-java = { group = "com.lyft.kronos", name = "kronos-java", version.ref = "kronosJava" }
+kronos-android = { group = "com.lyft.kronos", name = "kronos-android", version.ref = "kronosAndroid" }
+
+# Animation
+lottie = { group = "com.airbnb.android", name = "lottie", version.ref = "lottie" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }
+
+#google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+#firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytic" }
