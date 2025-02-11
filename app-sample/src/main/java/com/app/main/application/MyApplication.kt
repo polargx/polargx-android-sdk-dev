@@ -50,7 +50,9 @@ class MyApplication : BaseApplication() {
 
         val branchAppUnid = BuildConfig.BRANCH_APP_UNID
         val branchKey = BuildConfig.BRANCH_KEY
-        LinkAttribution.initApp(context = this, appUnid = branchAppUnid, apiKey = branchKey)
+        LinkAttribution
+            .initApp(context = this, appUnid = branchAppUnid, apiKey = branchKey)
+            .startInitializingApp()
     }
 
     private fun initListener() {

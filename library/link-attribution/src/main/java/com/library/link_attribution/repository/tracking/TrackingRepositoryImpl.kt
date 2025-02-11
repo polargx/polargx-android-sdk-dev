@@ -7,6 +7,8 @@ import com.library.link_attribution.repository.tracking.model.TrackClickModel
 import com.library.link_attribution.repository.tracking.remote.TrackingRemoteDatasource
 import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
 import com.library.link_attribution.repository.tracking.remote.api.TrackClickResponse
+import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
+import com.library.link_attribution.repository.tracking.remote.api.TrackEventResponse
 import io.ktor.client.call.body
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
@@ -74,4 +76,15 @@ class TrackingRepositoryImpl(
         }
     }
 
+    override fun trackEvent(request: TrackEventRequest): Flow<Unit> {
+        return flow {
+            val response = remoteDatasource.trackEvent(request)
+            if (response.status.isSuccess()) {
+                val body = response.body<TrackEventResponse>()
+                emit(Unit)
+            } else {
+                throw ApiError(response.bodyAsText())
+            }
+        }
+    }
 }

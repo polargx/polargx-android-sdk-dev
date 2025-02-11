@@ -2,6 +2,7 @@ package com.library.link_attribution.repository.tracking
 
 import com.library.link_attribution.repository.tracking.model.TrackClickModel
 import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
 import kotlinx.coroutines.flow.Flow
 
 interface TrackingRepository {
@@ -17,4 +18,5 @@ interface TrackingRepository {
         request: TrackClickRequest
     ): Flow<TrackClickModel?>
 
+    fun trackEvent(request: TrackEventRequest): Flow<Unit>
 }

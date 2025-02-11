@@ -1,11 +1,11 @@
 package com.library.link_attribution.repository.tracking.remote
 
 import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.headers
 import io.ktor.http.path
 
 class TrackingRemoteDatasourceImpl(
@@ -31,4 +31,10 @@ class TrackingRemoteDatasourceImpl(
         }
     }
 
+    override suspend fun trackEvent(request: TrackEventRequest): HttpResponse {
+        return client.post {
+            url.path("sdk/v1/events/track")
+            setBody(request)
+        }
+    }
 }

@@ -2,9 +2,7 @@ package com.library.link_attribution
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
@@ -13,29 +11,21 @@ import com.data.shared.ApiError
 import com.library.link_attribution.di.linkAttributeModule
 import com.library.link_attribution.extension.getDeviceModel
 import com.library.link_attribution.extension.getDeviceName
-import com.library.link_attribution.extension.getIP6Address
 import com.library.link_attribution.extension.getIP4Address
+import com.library.link_attribution.extension.getIP6Address
 import com.library.link_attribution.extension.getManufacturer
 import com.library.link_attribution.extension.getOsVersion
 import com.library.link_attribution.extension.getSdkVersion
 import com.library.link_attribution.listener.LinkInitListener
 import com.library.link_attribution.repository.configuration.ConfigurationRepository
-import com.library.link_attribution.repository.configuration.ConfigurationRepositoryImpl
-import com.library.link_attribution.repository.configuration.local.ConfigurationLocalDatasourceImpl
 import com.library.link_attribution.repository.configuration.model.InitSessionModel
-import com.library.link_attribution.repository.configuration.remote.ConfigurationRemoteDatasourceImpl
 import com.library.link_attribution.repository.configuration.remote.api.init.InitSessionRequest
 import com.library.link_attribution.repository.link.LinkRepository
-import com.library.link_attribution.repository.link.LinkRepositoryImpl
-import com.library.link_attribution.repository.link.local.LinkLocalDatasourceImpl
 import com.library.link_attribution.repository.link.model.LinkModel
-import com.library.link_attribution.repository.link.remote.LinkRemoteDatasourceImpl
 import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
 import com.library.link_attribution.repository.tracking.TrackingRepository
-import com.library.link_attribution.repository.tracking.TrackingRepositoryImpl
-import com.library.link_attribution.repository.tracking.local.TrackingLocalDatasourceImpl
-import com.library.link_attribution.repository.tracking.remote.TrackingRemoteDatasourceImpl
 import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.ClientRequestException
@@ -62,6 +52,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
@@ -71,10 +62,11 @@ import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
-import org.koin.core.context.startKoin
 import org.koin.core.component.inject
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
+import org.koin.core.context.startKoin
+import java.io.IOException
 
 class LinkAttribution(
     private val context: Context,
@@ -111,7 +103,7 @@ class LinkAttribution(
             context: Context,
             appUnid: String?,
             apiKey: String?,
-        ) {
+        ): LinkAttribution {
             if (instance == null) {
                 instance = LinkAttribution(
                     context = context,
@@ -121,6 +113,7 @@ class LinkAttribution(
             }
             instance?.injectManually()
             instance?.startInject()
+            return instance ?: throw Exception("LinkAttributionApp hasn't been initialized!")
         }
 
         fun init(
@@ -144,6 +137,26 @@ class LinkAttribution(
 
     fun isKoinStarted(): Boolean {
         return GlobalContext.getOrNull() != null
+    }
+
+    fun startInitializingApp() {
+        CoroutineScope(Dispatchers.Main).launch {
+            var error: Exception?
+            do {
+                try {
+                    trackEvent()
+                    error = null
+                    Log.d(TAG, "startInitializingApp: successful ✅")
+                } catch (e: IOException) {
+                    Log.d(TAG, "startInitializingApp: failed ⛔️ + retry 🔁 $e")
+                    error = e
+                    delay(1000)
+                } catch (e: Exception) {
+                    Log.d(TAG, "startInitializingApp: failed ⛔️ + stop ⛔️ $e")
+                    error = null
+                }
+            } while (error != null)
+        }
     }
 
     private fun startInject() {
@@ -414,6 +427,22 @@ class LinkAttribution(
                 .collect { link ->
                     Log.d(TAG, "trackClick:collect: link=$link")
                 }
+        }
+    }
+
+    private fun trackEvent() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val request = TrackEventRequest(
+                organizationUnid = appUnid,
+                eventName = "app_launch",
+                data = mapOf()
+            )
+            trackingRepository.trackEvent(request)
+                .flowOn(Dispatchers.IO)
+                .onStart { Log.d(TAG, "trackEvent: onStart") }
+                .onCompletion { Log.d(TAG, "trackEvent: onCompletion") }
+                .catch { error -> Log.d(TAG, "trackEvent: catch: error=$error") }
+                .collect { Log.d(TAG, "trackEvent: collect") }
         }
     }
 }
