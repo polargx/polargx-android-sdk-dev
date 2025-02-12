@@ -1,4 +1,4 @@
-package com.library.link_attribution.repository.tracking.remote.api
+package com.library.link_attribution.repository.tracking.remote.api.click
 
 import com.library.link_attribution.repository.tracking.remote.model.TrackClickDTO
 import kotlinx.serialization.SerialName

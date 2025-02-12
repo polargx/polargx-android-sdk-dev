@@ -1,6 +1,7 @@
 package com.library.link_attribution.repository.link
 
 import com.library.link_attribution.repository.link.model.LinkModel
+import com.library.link_attribution.repository.link.model.PublicLinkDataModel
 import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
 import kotlinx.coroutines.flow.Flow
 
@@ -24,4 +25,8 @@ interface LinkRepository {
         request: GetLinkByMatchingRequest
     ): Flow<LinkModel?>
 
+    fun getPublicLink(
+        domain: String?,
+        slug: String?
+    ): Flow<PublicLinkDataModel?>
 }

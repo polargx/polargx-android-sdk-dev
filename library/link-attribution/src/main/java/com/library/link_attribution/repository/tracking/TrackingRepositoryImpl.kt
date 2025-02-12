@@ -5,10 +5,12 @@ import com.library.link_attribution.repository.tracking.local.TrackingLocalDatas
 import com.library.link_attribution.repository.tracking.local.model.TrackClickEntity.Companion.toEntity
 import com.library.link_attribution.repository.tracking.model.TrackClickModel
 import com.library.link_attribution.repository.tracking.remote.TrackingRemoteDatasource
-import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
-import com.library.link_attribution.repository.tracking.remote.api.TrackClickResponse
-import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
-import com.library.link_attribution.repository.tracking.remote.api.TrackEventResponse
+import com.library.link_attribution.repository.tracking.remote.api.click.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.click.TrackClickResponse
+import com.library.link_attribution.repository.tracking.remote.api.event.TrackEventRequest
+import com.library.link_attribution.repository.tracking.remote.api.event.TrackEventResponse
+import com.library.link_attribution.repository.tracking.remote.api.link.TrackLinkRequest
+import com.library.link_attribution.repository.tracking.remote.api.link.TrackLinkResponse
 import io.ktor.client.call.body
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
@@ -81,6 +83,18 @@ class TrackingRepositoryImpl(
             val response = remoteDatasource.trackEvent(request)
             if (response.status.isSuccess()) {
                 val body = response.body<TrackEventResponse>()
+                emit(Unit)
+            } else {
+                throw ApiError(response.bodyAsText())
+            }
+        }
+    }
+
+    override fun trackLink(request: TrackLinkRequest): Flow<Unit> {
+        return flow {
+            val response = remoteDatasource.trackLink(request)
+            if (response.status.isSuccess()) {
+                val body = response.body<TrackLinkResponse>()
                 emit(Unit)
             } else {
                 throw ApiError(response.bodyAsText())

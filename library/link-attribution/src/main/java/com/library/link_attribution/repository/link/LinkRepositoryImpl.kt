@@ -4,10 +4,12 @@ import com.data.shared.ApiError
 import com.library.link_attribution.repository.link.local.LinkLocalDatasource
 import com.library.link_attribution.repository.link.local.model.LinkEntity.Companion.toEntity
 import com.library.link_attribution.repository.link.model.LinkModel
+import com.library.link_attribution.repository.link.model.PublicLinkDataModel
 import com.library.link_attribution.repository.link.remote.LinkRemoteDatasource
 import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
 import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingResponse
 import com.library.link_attribution.repository.link.remote.api.path.GetLinkByPathResponse
+import com.library.link_attribution.repository.link.remote.api.public_link.GetPublicLinkResponse
 import io.ktor.client.call.body
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
@@ -91,6 +93,22 @@ class LinkRepositoryImpl(
                 mLink = body.data?.link?.toExternal()
                 localDatasource.setLink(mLink?.toEntity())
                 emit(mLink)
+            } else {
+                throw ApiError(response.bodyAsText())
+            }
+        }
+    }
+
+    override fun getPublicLink(
+        domain: String?,
+        slug: String?
+    ): Flow<PublicLinkDataModel?> {
+        return flow {
+            val response = remoteDatasource.getPublicLink(domain, slug)
+            if (response.status.isSuccess()) {
+                val body = response.body<GetPublicLinkResponse>()
+                val publicLink = body.data?.publicLinkData?.toExternal()
+                emit(publicLink)
             } else {
                 throw ApiError(response.bodyAsText())
             }

@@ -1,4 +1,4 @@
-package com.library.link_attribution.repository.tracking.remote.api
+package com.library.link_attribution.repository.tracking.remote.api.click
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

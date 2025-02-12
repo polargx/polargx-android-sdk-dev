@@ -1,7 +1,8 @@
 package com.library.link_attribution.repository.tracking.remote
 
-import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
-import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
+import com.library.link_attribution.repository.tracking.remote.api.click.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.event.TrackEventRequest
+import com.library.link_attribution.repository.tracking.remote.api.link.TrackLinkRequest
 import io.ktor.client.statement.HttpResponse
 
 interface TrackingRemoteDatasource {
@@ -13,4 +14,6 @@ interface TrackingRemoteDatasource {
     ): HttpResponse
 
     suspend fun trackEvent(request: TrackEventRequest): HttpResponse
+
+    suspend fun trackLink(request: TrackLinkRequest): HttpResponse
 }

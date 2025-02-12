@@ -17,4 +17,9 @@ interface LinkRemoteDatasource {
         apiKey: String?,
         request: GetLinkByMatchingRequest
     ): HttpResponse
+
+    suspend fun getPublicLink(
+        domain: String?,
+        slug: String?
+    ): HttpResponse
 }

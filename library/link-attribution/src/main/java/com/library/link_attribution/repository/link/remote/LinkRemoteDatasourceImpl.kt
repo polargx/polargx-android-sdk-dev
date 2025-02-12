@@ -7,7 +7,6 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.headers
 import io.ktor.http.path
 
 class LinkRemoteDatasourceImpl(
@@ -50,4 +49,14 @@ class LinkRemoteDatasourceImpl(
         }
     }
 
+    override suspend fun getPublicLink(
+        domain: String?,
+        slug: String?
+    ): HttpResponse {
+        return client.get {
+            url.path("sdk/v1/links/public")
+            parameter("domain", domain)
+            parameter("slug", slug)
+        }
+    }
 }

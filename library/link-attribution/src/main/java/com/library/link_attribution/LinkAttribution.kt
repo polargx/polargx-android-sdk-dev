@@ -24,8 +24,8 @@ import com.library.link_attribution.repository.link.LinkRepository
 import com.library.link_attribution.repository.link.model.LinkModel
 import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
 import com.library.link_attribution.repository.tracking.TrackingRepository
-import com.library.link_attribution.repository.tracking.remote.api.TrackClickRequest
-import com.library.link_attribution.repository.tracking.remote.api.TrackEventRequest
+import com.library.link_attribution.repository.tracking.remote.api.click.TrackClickRequest
+import com.library.link_attribution.repository.tracking.remote.api.event.TrackEventRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.ClientRequestException
@@ -435,7 +435,7 @@ class LinkAttribution(
             val request = TrackEventRequest(
                 organizationUnid = appUnid,
                 eventName = "app_launch",
-                data = mapOf()
+                data = TrackEventRequest.Data()
             )
             trackingRepository.trackEvent(request)
                 .flowOn(Dispatchers.IO)
