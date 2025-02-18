@@ -29,14 +29,14 @@ class SplashActivityViewModel(
 
     }
 
-    fun onStartLinkAttributionInitFinished(attributes: Map<String?, String?>?, error: Throwable?) {
+    fun onStartLinkAttributionInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
         Log.d(
             TAG,
             "onStartLinkAttributionInitFinished: attributes=$attributes, error=$error"
         )
     }
 
-    fun onNewIntentAttributionInitFinished(attributes: Map<String?, String?>?, error: Throwable?) {
+    fun onNewIntentAttributionInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
         Log.d(
             TAG,
             "onNewIntentAttributionInitFinished: attributes=$attributes, error=$error"

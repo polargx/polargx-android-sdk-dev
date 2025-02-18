@@ -30,26 +30,20 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <!-- custom scheme -->
+                <!-- dev -->
+                <data android:scheme="vintagewalk.test" />
+                <!-- production -->
+                <data android:scheme="sample.production" />
+
+                <!-- universal -->
                 <data android:scheme="https" />
                 <data android:host="sample01.linkattribution.infinitech" />
                 <data android:host="sample01-alternate.linkattribution.infinitech" />
 
                 <data android:scheme="https" />
-                <data android:host="sample01.linkattribution.infinitech.dev" />
-                <data android:host="sample01-alternate.linkattribution.infinitech.dev" />
-            </intent-filter>
-
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <!-- dev -->
-                <data android:scheme="sample.testing" />
-                <!-- production -->
-                <data android:scheme="sample.production" />
-
+                <data android:host="test.makelabs.ai" />
+                <data android:host="test-alternate.makelabs.ai" />
             </intent-filter>
         </activity>
     </application>

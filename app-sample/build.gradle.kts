@@ -44,26 +44,23 @@ android {
             dimension = "buildMode"
             applicationId = "com.linkattribution.sample.dev"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
-            buildConfigField("String", "API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
+            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
 //            buildConfigField("String", "API_KEY", "\"b12IopSmv5106rSjbL4kJ70rWlk0bsLa1K9CGQDF\"")
-            buildConfigField("String", "BRANCH_APP_UNID", "\"25d6d1c0-d767-4794-b3cb-68696c3ff104\"")
-            buildConfigField("String", "BRANCH_KEY", "\"7d85d434986e646b39e9fa57edf6db270d10a5b7\"")
+            buildConfigField("String", "BRANCH_APP_ID", "\"d083a5cb-e3c3-4afa-ab0c-64e18ea72f0a\"")
         }
         create("staging") {
             dimension = "buildMode"
             applicationId = "com.linkattribution.sample.staging"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/staging\"")
-            buildConfigField("String", "API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
-            buildConfigField("String", "BRANCH_APP_UNID", "\"25d6d1c0-d767-4794-b3cb-68696c3ff104\"")
-            buildConfigField("String", "BRANCH_KEY", "\"7d85d434986e646b39e9fa57edf6db270d10a5b7\"")
+            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
+            buildConfigField("String", "BRANCH_APP_ID", "\"d083a5cb-e3c3-4afa-ab0c-64e18ea72f0a\"")
         }
         create("prod") {
             dimension = "buildMode"
             applicationId = "com.linkattribution.sample.prod"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
-            buildConfigField("String", "API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
-            buildConfigField("String", "BRANCH_APP_UNID", "\"25d6d1c0-d767-4794-b3cb-68696c3ff104\"")
-            buildConfigField("String", "BRANCH_KEY", "\"7d85d434986e646b39e9fa57edf6db270d10a5b7\"")
+            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
+            buildConfigField("String", "BRANCH_APP_ID", "\"b5bb8eda-d060-4208-9173-2c772d517db7\"")
         }
     }
 

@@ -1,25 +1,29 @@
 package com.library.link_attribution.repository.link.remote
 
-import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
+import com.library.link_attribution.repository.link.remote.api.click.LinkClickRequest
+import com.library.link_attribution.repository.link.remote.api.track.LinkTrackRequest
 import io.ktor.client.statement.HttpResponse
 
-
 interface LinkRemoteDatasource {
-
-    suspend fun getLinkByPath(
-        appUnid: String?,
-        apiKey: String?,
-        path: String?,
+    suspend fun fetchLinkData(
+        domain: String,
+        slug: String
     ): HttpResponse
 
-    suspend fun getLinkByMatching(
-        appUnid: String?,
-        apiKey: String?,
-        request: GetLinkByMatchingRequest
+    suspend fun fetchOrganization(
+        domain: String
     ): HttpResponse
 
-    suspend fun getPublicLink(
-        domain: String?,
-        slug: String?
+    suspend fun fetchLinkMatches(
+        fingerprint: String
+    ): HttpResponse
+
+    suspend fun track(
+        request: LinkTrackRequest?
+    ): HttpResponse
+
+    suspend fun linkClick(
+        linkClickUnid: String?,
+        request: LinkClickRequest?
     ): HttpResponse
 }

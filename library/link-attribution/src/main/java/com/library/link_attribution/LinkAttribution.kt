@@ -3,7 +3,6 @@ package com.library.link_attribution
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
@@ -16,49 +15,24 @@ import com.library.link_attribution.extension.getManufacturer
 import com.library.link_attribution.extension.getOsVersion
 import com.library.link_attribution.extension.getSdkVersion
 import com.library.link_attribution.listener.LinkInitListener
-import com.library.link_attribution.model.ApiError
-import com.library.link_attribution.repository.configuration.ConfigurationRepository
-import com.library.link_attribution.repository.configuration.model.InitSessionModel
-import com.library.link_attribution.repository.configuration.remote.api.init.InitSessionRequest
+import com.library.link_attribution.repository.event.EventRepository
+import com.library.link_attribution.repository.event.model.EventModel
+import com.library.link_attribution.repository.event.remote.api.EventTrackRequest
 import com.library.link_attribution.repository.link.LinkRepository
-import com.library.link_attribution.repository.link.model.LinkModel
-import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
-import com.library.link_attribution.repository.tracking.TrackingRepository
-import com.library.link_attribution.repository.tracking.remote.api.click.TrackClickRequest
-import com.library.link_attribution.repository.tracking.remote.api.event.TrackEventRequest
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.HttpResponseValidator
-import io.ktor.client.plugins.HttpSend
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.cache.HttpCache
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.plugin
-import io.ktor.client.request.headers
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.URLProtocol
-import io.ktor.http.append
-import io.ktor.http.encodedPath
+import com.library.link_attribution.repository.link.model.link.LinkDataModel
+import com.library.link_attribution.repository.link.remote.api.click.LinkClickRequest
+import com.library.link_attribution.repository.link.remote.api.track.LinkTrackRequest
+import com.library.link_attribution.utils.DateTimeUtils
+import com.lyft.kronos.AndroidClockFactory
+import com.lyft.kronos.KronosClock
 import io.ktor.http.isSuccess
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
@@ -66,54 +40,57 @@ import org.koin.core.component.inject
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
-import java.io.IOException
+import java.net.ConnectException
+import java.net.UnknownHostException
+import java.util.Calendar
+import java.util.TimeZone
 
 class LinkAttribution(
     private val context: Context,
-    private val appUnid: String?,
-    private val apiKey: String?,
+    private val appId: String?,
 ) : KoinComponent {
 
-    //    private lateinit var configurationRepository: ConfigurationRepository
-    private val configurationRepository: ConfigurationRepository by inject()
+    private val eventRepository: EventRepository by inject()
     private val linkRepository: LinkRepository by inject()
-    private val trackingRepository: TrackingRepository by inject()
+
+    private lateinit var mKronosClock: KronosClock
+
+    private var isAppInitialed: Boolean? = null
+
+    private var mInitAppJob: Job? = null
+    private var mEventTrackingJob: Job? = null
+    private var mGetLinkJob: Job? = null
 
     private var mUri: Uri? = null
     private var isReInitializing: Boolean? = null
+
+    private var mLastLink: LinkDataModel? = null
+
     private var mListener: LinkInitListener? = null
-
-    private var mInitSession: InitSessionModel? = null
-
-    //    private var mConfiguration: ConfigurationModel? = null
-    private var mLastLink: LinkModel? = null
-
-    private var mInitSessionJob: Job? = null
-    private var mGetLinkJob: Job? = null
 
     companion object {
         const val TAG = ">>>LinkAttribution"
-        const val ENDPOINT = "ec2-52-70-12-200.compute-1.amazonaws.com:1323"
-        const val X_API_KEY = ""
+        const val ENDPOINT = "jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev"
+        const val X_API_KEY = "BFH3j4Gsgy4Blnh87SDmj3163J1Ska9139tTI7Wv"
 
         @SuppressLint("StaticFieldLeak")
         private var instance: LinkAttribution? = null
 
         fun initApp(
             context: Context,
-            appUnid: String?,
-            apiKey: String?,
-        ): LinkAttribution {
+            appId: String?,
+        ) {
             if (instance == null) {
                 instance = LinkAttribution(
                     context = context,
-                    appUnid = appUnid,
-                    apiKey = apiKey
-                )
+                    appId = appId,
+                ).apply {
+                    startInject()
+                    mKronosClock = AndroidClockFactory.createKronosClock(context)
+                    mKronosClock.syncInBackground()
+                }
             }
-            instance?.injectManually()
-            instance?.startInject()
-            return instance ?: throw Exception("LinkAttributionApp hasn't been initialized!")
+            instance?.startInitializingApp()
         }
 
         fun init(
@@ -139,26 +116,6 @@ class LinkAttribution(
         return GlobalContext.getOrNull() != null
     }
 
-    fun startInitializingApp() {
-        CoroutineScope(Dispatchers.Main).launch {
-            var error: Exception?
-            do {
-                try {
-                    trackEvent()
-                    error = null
-                    Log.d(TAG, "startInitializingApp: successful ✅")
-                } catch (e: IOException) {
-                    Log.d(TAG, "startInitializingApp: failed ⛔️ + retry 🔁 $e")
-                    error = e
-                    delay(1000)
-                } catch (e: Exception) {
-                    Log.d(TAG, "startInitializingApp: failed ⛔️ + stop ⛔️ $e")
-                    error = null
-                }
-            } while (error != null)
-        }
-    }
-
     private fun startInject() {
         if (isKoinStarted()) {
             loadKoinModules(linkAttributeModule)
@@ -171,278 +128,243 @@ class LinkAttribution(
         }
     }
 
-    private fun getClient(endpoint: String, xApiKey: String): HttpClient {
-        val client = HttpClient(Android) {
-            engine {
-                socketTimeout = 60_000
-                connectTimeout = 60_000
-            }
-            defaultRequest {
-                url {
-                    protocol = URLProtocol.HTTP
-//                    protocol = URLProtocol.HTTPS
-                    host = endpoint
-                }
-                headers {
-                    append(HttpHeaders.ContentType, ContentType.Application.Json)
-//                    append("x-api-key", xApiKey)
-                }
-            }
+    fun isAppInitializing(): Boolean {
+        return mInitAppJob?.isActive == true
+    }
 
-            install(HttpRequestRetry) {
-                retryOnServerErrors(0)
-                exponentialDelay()
-            }
-            install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        Log.i("HttpClient", message)
+    fun startInitializingApp() {
+        if (mInitAppJob?.isActive == true) return
+        mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
+            reset()
+            var shouldRetry = true
+            do {
+                try {
+                    val now = Calendar.getInstance().apply {
+                        timeInMillis = mKronosClock.getCurrentTimeMs()
                     }
-                }
-                level = LogLevel.ALL
-            }
-            install(ContentNegotiation) {
-                json(
-                    Json {
-                        isLenient = true
-                        prettyPrint = true
-                        ignoreUnknownKeys = true
-                    }
-                )
-            }
-            install(HttpCache)
-            install(HttpTimeout) {
-                requestTimeoutMillis = 60_000
-            }
-
-            HttpResponseValidator {
-                validateResponse { response ->
-                    Log.d(TAG, "validateResponse: response=$response")
-                    if (!response.status.isSuccess()) {
-                        throw ClientRequestException(response, "")
-                    }
-                }
-
-                handleResponseExceptionWithRequest { cause, request ->
-                    Log.d(
-                        TAG,
-                        "handleResponseExceptionWithRequest: cause=$cause, request=$request"
+                    val launchEvent = EventModel(
+                        organizationUnid = appId,
+                        eventName = EventModel.Type.APP_LAUNCH,
+                        eventTime = DateTimeUtils.calendarToString(
+                            source = now,
+                            format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                            timeZone = LinkAttributionConstants.DateTime.utcTimeZone,
+                        ),
+                        data = mutableMapOf()
                     )
-                    try {
-                        if (cause !is ClientRequestException) throw cause
-                        val errorData = cause.response.bodyAsText()
-                        val error = ApiError(errorData)
-                        Log.d(
-                            TAG,
-                            "handleResponseExceptionWithRequest: error=${error}, errorData=${errorData}"
-                        )
-                        when (error.code) {
-
+                    val request = EventTrackRequest.from(launchEvent)
+                    val response = eventRepository.rawTrack(request)
+                    if (response.status.isSuccess()) {
+                        Log.d(TAG, "startInitializingApp: successful ✅")
+                        isAppInitialed = true
+                        shouldRetry = false
+                    }
+                    if (response.status.value == 403) {
+                        Log.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
+                        shouldRetry = false
+                    }
+                } catch (throwable: Throwable) {
+                    when (throwable) {
+                        is ConnectException -> {
+                            // Handle connection refused or other connection issues (no internet)
+                            Log.d(
+                                TAG,
+                                "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
+                            )
+                            shouldRetry = true
+                            delay(1000)
                         }
-                        throw ApiError(errorData)
-                    } catch (ex: Throwable) {
-                        Log.d(TAG, "response: ex=${ex}")
-                        throw ex
+
+                        is UnknownHostException -> {
+                            // Handle DNS resolution failures (no internet or incorrect URL)
+                            Log.d(
+                                TAG,
+                                "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
+                            )
+                            shouldRetry = true
+                            delay(1000)
+                        }
+
+                        else -> {
+                            // Handle other exceptions (e.g., server errors, JSON parsing)
+                            Log.d(
+                                TAG,
+                                "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
+                            )
+                            shouldRetry = false
+                        }
                     }
                 }
-            }
-
+            } while (shouldRetry)
         }
-
-        client.plugin(HttpSend).intercept { request ->
-            Log.d(TAG, "request=$request")
-            if (request.url.encodedPath.endsWith("users/password/login", true)
-                || request.url.encodedPath.endsWith("users/password/signup", true)
-                || request.url.encodedPath.endsWith("users/anon/signup", true)
-                || request.url.encodedPath.endsWith("users/password/forgot", true)
-            ) {
-                request.headers.remove("token")
-            }
-            execute(request)
-        }
-        return client
     }
 
-    private fun getSharedPreferences(): SharedPreferences {
-        return context.getSharedPreferences("linkAttribution.file", Context.MODE_PRIVATE)
+    private suspend fun reset() {
+        eventRepository.reset()
+        linkRepository.reset()
     }
 
-    private fun injectManually() {
-        val sf = getSharedPreferences()
-        val httpClient = getClient(endpoint = ENDPOINT, xApiKey = X_API_KEY)
-//        configurationRepository = ConfigurationRepositoryImpl(
-//            localDatasource = ConfigurationLocalDatasourceImpl(sf = sf),
-//            remoteDatasource = ConfigurationRemoteDatasourceImpl(client = httpClient)
-//        )
-//        linkRepository = LinkRepositoryImpl(
-//            localDatasource = LinkLocalDatasourceImpl(sf = sf),
-//            remoteDatasource = LinkRemoteDatasourceImpl(client = httpClient)
-//        )
-//        trackingRepository = TrackingRepositoryImpl(
-//            localDatasource = TrackingLocalDatasourceImpl(sf = sf),
-//            remoteDatasource = TrackingRemoteDatasourceImpl(client = httpClient)
-//        )
+    fun trackEvent(
+        @EventModel.Type type: String?,
+        data: Map<String, String?>?
+    ) {
+        trackEvent(
+            type = type,
+            time = Calendar.getInstance().apply {
+                timeInMillis = mKronosClock.getCurrentTimeMs()
+            },
+            data = data
+        )
+    }
+
+    fun trackEvent(
+        @EventModel.Type type: String?,
+        time: Calendar,
+        data: Map<String, String?>?
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val event = EventModel(
+                organizationUnid = appId,
+                eventName = type,
+                eventTime = DateTimeUtils.calendarToString(
+                    source = time,
+                    format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                ),
+                data = data
+            )
+            val eventList = eventRepository.getCacheEventList()?.toMutableList() ?: mutableListOf()
+            eventList.add(event)
+            eventRepository.setCacheEventList(eventList)
+            startTrackingQueueIfNeeded()
+        }
+    }
+
+    private fun startTrackingQueueIfNeeded() {
+        if (mEventTrackingJob?.isActive == true) return
+        mEventTrackingJob = CoroutineScope(Dispatchers.IO).launch {
+            eventRepository.getCacheEventList()?.let { eventList ->
+                if (eventList.isEmpty()) return@launch
+                eventList.toMutableList().map { event ->
+                    async {
+                        val request = EventTrackRequest.from(event)
+                        val response = eventRepository.rawTrack(request)
+                        if (response.status.isSuccess()) {
+                            Log.d(TAG, "startTrackingQueueIfNeeded: successful ✅, event=$event")
+                            val latestEventList =
+                                eventRepository.getCacheEventList()?.toMutableList()
+                            latestEventList?.remove(event)
+                            eventRepository.setCacheEventList(latestEventList)
+                        }
+                    }
+                }.awaitAll()
+
+                startTrackingQueueIfNeeded()
+            }
+        }
     }
 
     fun init(activity: Activity?, uri: Uri?) {
         isReInitializing = false
         mUri = uri ?: activity?.intent?.data
-        if (mInitSessionJob?.isActive == true) return
-        handleInitSession(activity = activity)
+        handleFetchLinkData(activity = activity)
     }
 
     fun reInit(activity: Activity?, uri: Uri?) {
         isReInitializing = true
         mUri = uri ?: activity?.intent?.data
-        if (mInitSessionJob?.isActive == true) return
-        handleInitSession(activity = activity)
+        handleFetchLinkData(activity = activity)
     }
 
-    private fun handleInitSession(activity: Activity?) {
-        val windowMetrics = if (activity == null) null else WindowMetricsCalculator.getOrCreate()
-            .computeCurrentWindowMetrics(activity)
-        val width = windowMetrics?.bounds?.width()
-        val height = windowMetrics?.bounds?.height()
-
-        // Get density using Resources
-        val metrics = activity?.resources?.displayMetrics
-        val density = metrics?.density
-        val densityDpi = metrics?.densityDpi
-
-        Log.d(
-            TAG, "initSession: " +
-                    "\nIP4Address=${context.getIP4Address()}" +
-                    "\nIP6Address=${context.getIP6Address()}" +
-                    "\nosVersion=${context.getOsVersion()}" +
-                    "\nsdkVersion=${context.getSdkVersion()}" +
-                    "\ndeviceModel=${context.getDeviceModel()}" +
-                    "\nmanufacturer=${context.getManufacturer()}" +
-                    "\ndeviceName=${context.getDeviceName()}" +
-                    "\nwindow.width=${width}" +
-                    "\nwindow.height=${height}" +
-                    "\nwindow.density=${density}" +
-                    "\nwindow.densityDpi=${densityDpi}"
-        )
-        if (mInitSessionJob?.isActive == true) {
-            mInitSessionJob?.cancel()
-        }
-        mInitSessionJob = CoroutineScope(Dispatchers.IO).launch {
-            val request = InitSessionRequest()
-            configurationRepository.initSession(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                request = request
-            ).flowOn(Dispatchers.IO)
-                .onStart { Log.d(TAG, "initSession:onStart") }
-                .catch { error ->
-                    Log.d(TAG, "initSession:catch: error=$error")
-                    if (mUri?.path.isNullOrEmpty()) {
-                        getLinkByMatching()
-                    } else {
-                        getLinkByPath(mUri?.path?.replace("/", ""))
-                    }
-                }
-                .onCompletion { Log.d(TAG, "initSession:onCompletion") }
-                .collect { initSession ->
-                    Log.d(TAG, "initSession:collect: initSession=$initSession")
-                    mInitSession = initSession
-                    if (mUri?.path.isNullOrEmpty()) {
-                        getLinkByMatching()
-                    } else {
-                        getLinkByPath(mUri?.path?.replace("/", ""))
-                    }
-                }
-        }
-    }
-
-    private fun getLinkByPath(path: String?) {
+    private fun handleFetchLinkData(activity: Activity?) {
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            linkRepository.fetchAndCacheLinkByPath(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                path = path
+            val domain = mUri?.host
+            if (domain?.endsWith(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX) != true) {
+                Log.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+                return@launch
+            }
+            val subDomain = domain.replace(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX, "")
+            val path = mUri?.path?.replace("/", "")
+            val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
+                activity,
+                mKronosClock.getCurrentTimeMs()
             )
-                .flowOn(Dispatchers.IO)
-                .onStart { Log.d(TAG, "getLinkByPath:onStart") }
-                .catch { error ->
-                    Log.d(TAG, "getLinkByPath:catch: error=$error")
-                    mListener?.onInitFinished(null, error)
+            val clickTime = Calendar.getInstance().apply {
+                timeInMillis = mKronosClock.getCurrentTimeMs()
+            }
+            if (!mUri?.path.isNullOrEmpty()) {
+                try {
+                    val getLinkResponse = linkRepository.fetchLinkData(
+                        domain = subDomain,
+                        slug = path
+                    )
+                    mLastLink = getLinkResponse.data?.sdkLinkData?.toExternal()
+
+                    val trackRequest = LinkTrackRequest(
+                        clickTime = DateTimeUtils.calendarToString(
+                            clickTime,
+                            LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                            LinkAttributionConstants.DateTime.utcTimeZone,
+                        ),
+                        domain = subDomain,
+                        slug = path,
+                        fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
+                        trackType = LinkTrackRequest.TrackType.APP_CLICK,
+                        deviceData = mutableMapOf(),
+                        additionalData = mutableMapOf(),
+                    )
+                    val trackResponse = linkRepository.track(trackRequest)
+                    val linkClickUnid = trackResponse.data?.linkClick?.unid
+                    val request = LinkClickRequest(sdkUsed = true)
+                    linkRepository.linkClick(linkClickUnid, request)
+                    mListener?.onInitFinished(mLastLink?.data, null)
+                } catch (throwable: Throwable) {
+                    mListener?.onInitFinished(null, throwable)
                 }
-                .onCompletion { Log.d(TAG, "getLinkByPath:onCompletion") }
-                .collect { link ->
-                    Log.d(TAG, "getLinkByPath:collect: link=$link")
-                    mLastLink = link
-                    mListener?.onInitFinished(mLastLink?.attributes, null)
-                    trackClick(link)
-                }
+                return@launch
+            }
+            if (isFirstTimeLaunch && mUri?.path.isNullOrEmpty()) {
+                val windowMetrics =
+                    if (activity == null) null else WindowMetricsCalculator.getOrCreate()
+                        .computeCurrentWindowMetrics(activity)
+                val width = windowMetrics?.bounds?.width()
+                val height = windowMetrics?.bounds?.height()
+
+                // Get density using Resources
+                val metrics = activity?.resources?.displayMetrics
+                val density = metrics?.density
+                val densityDpi = metrics?.densityDpi
+
+                Log.d(
+                    TAG, "initSession: " +
+                            "\nIP4Address=${context.getIP4Address()}" +
+                            "\nIP6Address=${context.getIP6Address()}" +
+                            "\nosVersion=${context.getOsVersion()}" +
+                            "\nsdkVersion=${context.getSdkVersion()}" +
+                            "\ndeviceModel=${context.getDeviceModel()}" +
+                            "\nmanufacturer=${context.getManufacturer()}" +
+                            "\ndeviceName=${context.getDeviceName()}" +
+                            "\nwindow.width=${width}" +
+                            "\nwindow.height=${height}" +
+                            "\nwindow.density=${density}" +
+                            "\nwindow.densityDpi=${densityDpi}"
+                )
+//                linkRepository.fetchLinkMatches()
+//                getLinkByMatching()
+            }
         }
     }
 
-    private fun getLinkByMatching() {
-        if (mGetLinkJob?.isActive == true) {
-            mGetLinkJob?.cancel()
-        }
-        mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            val request = GetLinkByMatchingRequest()
-            linkRepository.fetchAndCacheLinkByMatching(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                request = request
-            )
-                .flowOn(Dispatchers.IO)
-                .onStart { Log.d(TAG, "getLinkByMatching:onStart") }
-                .catch { error ->
-                    Log.d(TAG, "getLinkByMatching:catch: error=$error")
-                    mListener?.onInitFinished(null, error)
-                }
-                .onCompletion { Log.d(TAG, "getLinkByMatching:onCompletion") }
-                .collect { link ->
-                    Log.d(TAG, "getLinkByMatching:collect: link=$link")
-                    mLastLink = link
-                    mListener?.onInitFinished(mLastLink?.attributes, null)
-                    trackClick(link)
-                }
-        }
-    }
-
-    private fun trackClick(link: LinkModel?) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val request = TrackClickRequest(
-                path = link?.path
-            )
-            trackingRepository.trackClick(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                request = request
-            )
-                .flowOn(Dispatchers.IO)
-                .onStart { Log.d(TAG, "trackClick:onStart") }
-                .catch { error ->
-                    Log.d(TAG, "trackClick:catch: error=$error")
-                }
-                .onCompletion { Log.d(TAG, "trackClick:onCompletion") }
-                .collect { link ->
-                    Log.d(TAG, "trackClick:collect: link=$link")
-                }
-        }
-    }
-
-    private fun trackEvent() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val request = TrackEventRequest(
-                organizationUnid = appUnid,
-                eventName = "app_launch",
-                data = TrackEventRequest.Data()
-            )
-            trackingRepository.trackEvent(request)
-                .flowOn(Dispatchers.IO)
-                .onStart { Log.d(TAG, "trackEvent: onStart") }
-                .onCompletion { Log.d(TAG, "trackEvent: onCompletion") }
-                .catch { error -> Log.d(TAG, "trackEvent: catch: error=$error") }
-                .collect { Log.d(TAG, "trackEvent: collect") }
+    private fun onInternetConnectionChanged(connected: Boolean) {
+        if (connected) {
+            if (isAppInitialed == true) {
+                startTrackingQueueIfNeeded()
+                return
+            }
+            if (isAppInitializing()) return
+            startInitializingApp()
         }
     }
 }

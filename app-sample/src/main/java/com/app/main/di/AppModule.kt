@@ -99,7 +99,7 @@ val appModule = module {
                 }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json)
-                    append("x-api-key", BuildConfig.API_KEY)
+                    append("x-api-key", BuildConfig.X_API_KEY)
                     get<UserRepository>().getCacheToken()?.let { token ->
                         append("token", token)
                     }

@@ -2,19 +2,17 @@ package com.library.link_attribution.repository.link
 
 import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.link.local.LinkLocalDatasource
-import com.library.link_attribution.repository.link.local.model.LinkEntity.Companion.toEntity
-import com.library.link_attribution.repository.link.model.LinkModel
-import com.library.link_attribution.repository.link.model.PublicLinkDataModel
 import com.library.link_attribution.repository.link.remote.LinkRemoteDatasource
-import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingRequest
-import com.library.link_attribution.repository.link.remote.api.matching.GetLinkByMatchingResponse
-import com.library.link_attribution.repository.link.remote.api.path.GetLinkByPathResponse
-import com.library.link_attribution.repository.link.remote.api.public_link.GetPublicLinkResponse
+import com.library.link_attribution.repository.link.remote.api.click.LinkClickRequest
+import com.library.link_attribution.repository.link.remote.api.click.LinkClickResponse
+import com.library.link_attribution.repository.link.remote.api.link.GetLinkDataResponse
+import com.library.link_attribution.repository.link.remote.api.matches.GetLinkMatchesResponse
+import com.library.link_attribution.repository.link.remote.api.organization.GetOrganizationResponse
+import com.library.link_attribution.repository.link.remote.api.track.LinkTrackRequest
+import com.library.link_attribution.repository.link.remote.api.track.LinkTrackResponse
 import io.ktor.client.call.body
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 
 class LinkRepositoryImpl(
     private val localDatasource: LinkLocalDatasource,
@@ -25,93 +23,90 @@ class LinkRepositoryImpl(
         const val TAG = ">>>LinkRepositoryImpl"
     }
 
-    private var mLink: LinkModel? = null
-
-    override fun onAppDied() {
-        mLink = null
+    override suspend fun onAppDied() {
     }
 
     private fun onUnauthenticated() {
-        mLink = null
     }
 
-    override fun onLoggedOut() {
+    override suspend fun onLoggedOut() {
         onUnauthenticated()
     }
 
-    override fun onTokenExpired() {
+    override suspend fun onTokenExpired() {
         onUnauthenticated()
     }
 
-    override fun getCacheLink(): LinkModel? {
-        if (mLink == null) {
-            mLink = localDatasource.getLink()?.toExternal()
-        }
-        return mLink
-    }
-
-    override fun setLink(link: LinkModel?) {
-        mLink = link
-        localDatasource.setLink(link?.toEntity())
-    }
-
-    override fun fetchAndCacheLinkByPath(
-        appUnid: String?,
-        apiKey: String?,
-        path: String?
-    ): Flow<LinkModel?> {
-        return flow {
-            val response = remoteDatasource.getLinkByPath(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                path = path
-            )
-            if (response.status.isSuccess()) {
-                val body = response.body<GetLinkByPathResponse>()
-                mLink = body.data?.link?.toExternal()
-                localDatasource.setLink(mLink?.toEntity())
-                emit(mLink)
-            } else {
-                throw ApiError(response.bodyAsText())
-            }
-        }
-    }
-
-    override fun fetchAndCacheLinkByMatching(
-        appUnid: String?,
-        apiKey: String?,
-        request: GetLinkByMatchingRequest
-    ): Flow<LinkModel?> {
-        return flow {
-            val response = remoteDatasource.getLinkByMatching(
-                appUnid = appUnid,
-                apiKey = apiKey,
-                request = request
-            )
-            if (response.status.isSuccess()) {
-                val body = response.body<GetLinkByMatchingResponse>()
-                mLink = body.data?.link?.toExternal()
-                localDatasource.setLink(mLink?.toEntity())
-                emit(mLink)
-            } else {
-                throw ApiError(response.bodyAsText())
-            }
-        }
-    }
-
-    override fun getPublicLink(
+    override suspend fun fetchLinkData(
         domain: String?,
         slug: String?
-    ): Flow<PublicLinkDataModel?> {
-        return flow {
-            val response = remoteDatasource.getPublicLink(domain, slug)
-            if (response.status.isSuccess()) {
-                val body = response.body<GetPublicLinkResponse>()
-                val publicLink = body.data?.publicLinkData?.toExternal()
-                emit(publicLink)
-            } else {
-                throw ApiError(response.bodyAsText())
-            }
+    ): GetLinkDataResponse {
+        if (domain == null) throw Throwable("domain is null")
+        if (slug == null) throw Throwable("slug is null")
+
+        val response = remoteDatasource.fetchLinkData(
+            domain = domain,
+            slug = slug
+        )
+        if (!response.status.isSuccess()) {
+            throw ApiError(response.bodyAsText())
         }
+        return response.body<GetLinkDataResponse>()
+    }
+
+    override suspend fun fetchOrganization(
+        domain: String?
+    ): GetOrganizationResponse {
+        if (domain == null) throw Throwable("domain is null")
+        val response = remoteDatasource.fetchOrganization(
+            domain = domain,
+        )
+        if (!response.status.isSuccess()) {
+            throw ApiError(response.bodyAsText())
+        }
+        return response.body<GetOrganizationResponse>()
+    }
+
+    override suspend fun fetchLinkMatches(
+        fingerprint: String?
+    ): GetLinkMatchesResponse {
+        if (fingerprint == null) throw Throwable("fingerprint is null")
+        val response = remoteDatasource.fetchLinkMatches(
+            fingerprint = fingerprint,
+        )
+        if (!response.status.isSuccess()) {
+            throw ApiError(response.bodyAsText())
+        }
+        return response.body<GetLinkMatchesResponse>()
+    }
+
+    override suspend fun track(
+        request: LinkTrackRequest?
+    ): LinkTrackResponse {
+        val response = remoteDatasource.track(
+            request = request,
+        )
+        if (!response.status.isSuccess()) {
+            throw ApiError(response.bodyAsText())
+        }
+        return response.body<LinkTrackResponse>()
+    }
+
+    override suspend fun linkClick(
+        linkClickUnid: String?,
+        request: LinkClickRequest?
+    ): LinkClickResponse {
+        val response = remoteDatasource.linkClick(
+            linkClickUnid = linkClickUnid,
+            request = request,
+        )
+        if (!response.status.isSuccess()) {
+            throw ApiError(response.bodyAsText())
+        }
+        return response.body<LinkClickResponse>()
+    }
+
+    override suspend fun reset() {
+
     }
 }

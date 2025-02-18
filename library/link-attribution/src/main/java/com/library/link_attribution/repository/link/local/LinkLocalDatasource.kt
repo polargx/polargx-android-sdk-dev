@@ -1,10 +1,10 @@
 package com.library.link_attribution.repository.link.local
 
-import com.library.link_attribution.repository.link.local.model.LinkEntity
+import com.library.link_attribution.repository.link.local.model.link.LinkDataEntity
 
 interface LinkLocalDatasource {
 
-    fun getLink(): LinkEntity?
-    fun setLink(link: LinkEntity?)
+    fun getLinkData(): LinkDataEntity?
+    fun setLinkData(link: LinkDataEntity?)
 
 }

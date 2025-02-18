@@ -52,7 +52,7 @@ class SplashActivity : BaseSplashActivity(R.layout.activity_splash),
             activity = this,
             uri = intent?.data,
             listener = object : LinkInitListener {
-                override fun onInitFinished(attributes: Map<String?, String?>?, error: Throwable?) {
+                override fun onInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
                     mViewModel.onStartLinkAttributionInitFinished(attributes, error)
                 }
             })
@@ -64,7 +64,7 @@ class SplashActivity : BaseSplashActivity(R.layout.activity_splash),
             activity = this,
             uri = intent.data,
             listener = object : LinkInitListener {
-                override fun onInitFinished(attributes: Map<String?, String?>?, error: Throwable?) {
+                override fun onInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
                     mViewModel.onNewIntentAttributionInitFinished(attributes, error)
                 }
             })

@@ -48,11 +48,11 @@ class MyApplication : BaseApplication() {
         mKronosClock = AndroidClockFactory.createKronosClock(this)
         mKronosClock.syncInBackground()
 
-        val branchAppUnid = BuildConfig.BRANCH_APP_UNID
-        val branchKey = BuildConfig.BRANCH_KEY
-        LinkAttribution
-            .initApp(context = this, appUnid = branchAppUnid, apiKey = branchKey)
-            .startInitializingApp()
+        val branchAppId = BuildConfig.BRANCH_APP_ID
+        LinkAttribution.initApp(
+            context = this,
+            appId = branchAppId,
+        )
     }
 
     private fun initListener() {
