@@ -1,6 +1,6 @@
 package com.library.link_attribution.repository.tracking
 
-import com.data.shared.ApiError
+import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.tracking.local.TrackingLocalDatasource
 import com.library.link_attribution.repository.tracking.local.model.TrackClickEntity.Companion.toEntity
 import com.library.link_attribution.repository.tracking.model.TrackClickModel

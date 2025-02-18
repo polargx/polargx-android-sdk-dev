@@ -45,6 +45,7 @@ android {
             applicationId = "com.linkattribution.sample.dev"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
             buildConfigField("String", "API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
+//            buildConfigField("String", "API_KEY", "\"b12IopSmv5106rSjbL4kJ70rWlk0bsLa1K9CGQDF\"")
             buildConfigField("String", "BRANCH_APP_UNID", "\"25d6d1c0-d767-4794-b3cb-68696c3ff104\"")
             buildConfigField("String", "BRANCH_KEY", "\"7d85d434986e646b39e9fa57edf6db270d10a5b7\"")
         }

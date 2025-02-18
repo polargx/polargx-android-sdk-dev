@@ -4,8 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
     id("maven-publish")
-    id("signing")
-//    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -14,7 +12,6 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
-        buildConfigField("String", "LIBRARY_VERSION", "\"1.0.0\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -23,20 +20,11 @@ android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
-//        compose = true
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-        }
-    }
-
-    publishing {
-        // Enable publishing for the release variant
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
         }
     }
 
@@ -47,13 +35,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-//    composeOptions {
-//        kotlinCompilerExtensionVersion = "1.5.1"
-//    }
 }
 
 dependencies {
-    implementation(project(":data:shared"))
+//    implementation(project(":data:shared"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -84,66 +69,19 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 }
 
-val libVersion = "1.0.0"
-val libGroup = "dev.hoangnam9194.library"
-val libArtifactId = "linkattribution"
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                groupId = "com.github.infinitech-dev" // Replace with your GitHub username
+                artifactId = "linkAttribution" // Replace with your library's name (e.g., my-awesome-library)
+                version = "1.0.0" // Initial version number (important!)
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            // The artifactId should be specific to this module
-            groupId = "com.library.link_attribution"
-            artifactId = "my-linkattribution"
-            version = "1.0.0"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-
-            pom {
-                name.set("My Link Attribution Module")
-                description.set("A specific feature module from my Android project")
-                url.set("https://github.com/username/project")
-
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
+                afterEvaluate {
+                    from(components["release"])
                 }
-
-                developers {
-                    developer {
-                        id.set("username")
-                        name.set("Your Name")
-                        email.set("your.email@example.com")
-                    }
-                }
-
-                scm {
-                    connection.set("scm:git:git://github.com/username/project.git")
-                    developerConnection.set("scm:git:ssh://github.com:username/project.git")
-                    url.set("https://github.com/username/project")
-                }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_PASSWORD")
             }
         }
     }
 }
 
-signing {
-    val signingKey = System.getenv("GPG_SIGNING_KEY")
-    val signingPassword = System.getenv("GPG_SIGNING_PASSWORD")
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(publishing.publications["release"])
-}

@@ -1,6 +1,6 @@
 package com.library.link_attribution.repository.link
 
-import com.data.shared.ApiError
+import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.link.local.LinkLocalDatasource
 import com.library.link_attribution.repository.link.local.model.LinkEntity.Companion.toEntity
 import com.library.link_attribution.repository.link.model.LinkModel

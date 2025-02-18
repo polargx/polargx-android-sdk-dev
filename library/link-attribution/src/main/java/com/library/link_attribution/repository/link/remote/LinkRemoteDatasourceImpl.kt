@@ -54,7 +54,7 @@ class LinkRemoteDatasourceImpl(
         slug: String?
     ): HttpResponse {
         return client.get {
-            url.path("sdk/v1/links/public")
+            url.path("sdk/v1/links/data")
             parameter("domain", domain)
             parameter("slug", slug)
         }

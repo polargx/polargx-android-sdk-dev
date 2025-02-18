@@ -7,7 +7,6 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
-import com.data.shared.ApiError
 import com.library.link_attribution.di.linkAttributeModule
 import com.library.link_attribution.extension.getDeviceModel
 import com.library.link_attribution.extension.getDeviceName
@@ -17,6 +16,7 @@ import com.library.link_attribution.extension.getManufacturer
 import com.library.link_attribution.extension.getOsVersion
 import com.library.link_attribution.extension.getSdkVersion
 import com.library.link_attribution.listener.LinkInitListener
+import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.configuration.ConfigurationRepository
 import com.library.link_attribution.repository.configuration.model.InitSessionModel
 import com.library.link_attribution.repository.configuration.remote.api.init.InitSessionRequest

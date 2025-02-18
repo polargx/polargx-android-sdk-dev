@@ -1,6 +1,6 @@
 package com.library.link_attribution.repository.configuration
 
-import com.data.shared.ApiError
+import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.configuration.local.ConfigurationLocalDatasource
 import com.library.link_attribution.repository.configuration.local.model.ConfigurationEntity.Companion.toEntity
 import com.library.link_attribution.repository.configuration.local.model.InitSessionEntity.Companion.toEntity
