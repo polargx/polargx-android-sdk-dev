@@ -15,6 +15,7 @@ import com.library.link_attribution.extension.getManufacturer
 import com.library.link_attribution.extension.getOsVersion
 import com.library.link_attribution.extension.getSdkVersion
 import com.library.link_attribution.listener.LinkInitListener
+import com.library.link_attribution.model.configs.ConfigsModel
 import com.library.link_attribution.repository.event.EventRepository
 import com.library.link_attribution.repository.event.model.EventModel
 import com.library.link_attribution.repository.event.remote.api.EventTrackRequest
@@ -71,15 +72,21 @@ class LinkAttribution(
     companion object {
         const val TAG = ">>>LinkAttribution"
         const val ENDPOINT = "jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev"
-        const val X_API_KEY = "BFH3j4Gsgy4Blnh87SDmj3163J1Ska9139tTI7Wv"
 
         @SuppressLint("StaticFieldLeak")
         private var instance: LinkAttribution? = null
+        private var mConfigs: ConfigsModel? = null
+
+        fun getConfigs(): ConfigsModel? {
+            return mConfigs
+        }
 
         fun initApp(
             context: Context,
             appId: String?,
+            apiKey: String?,
         ) {
+            mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
             if (instance == null) {
                 instance = LinkAttribution(
                     context = context,

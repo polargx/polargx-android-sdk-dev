@@ -2,6 +2,7 @@ package com.library.link_attribution.di
 
 import android.content.Context
 import android.util.Log
+import com.library.link_attribution.BuildConfig
 import com.library.link_attribution.LinkAttribution
 import com.library.link_attribution.LinkAttribution.Companion.TAG
 import com.library.link_attribution.model.ApiError
@@ -57,7 +58,12 @@ val linkAttributeModule = module {
     singleOf(::EventRepositoryImpl) { bind<EventRepository>() }
 
 
-    single { androidApplication().getSharedPreferences("linkAttribution.file", Context.MODE_PRIVATE) }
+    single {
+        androidApplication().getSharedPreferences(
+            "linkAttribution.file",
+            Context.MODE_PRIVATE
+        )
+    }
 
     single {
         val client = HttpClient(Android) {
@@ -69,11 +75,11 @@ val linkAttributeModule = module {
                 url {
 //                    protocol = URLProtocol.HTTP
                     protocol = URLProtocol.HTTPS
-                    host = LinkAttribution.ENDPOINT
+                    host = BuildConfig.API_URL
                 }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json)
-                    append("x-api-key", LinkAttribution.X_API_KEY)
+                    append("x-api-key", LinkAttribution.getConfigs()?.apiKey ?: "")
                 }
             }
 
@@ -137,17 +143,17 @@ val linkAttributeModule = module {
 
         }
 
-        client.plugin(HttpSend).intercept { request ->
-            Log.d(TAG, "request=$request")
-            if (request.url.encodedPath.endsWith("users/password/login", true)
-                || request.url.encodedPath.endsWith("users/password/signup", true)
-                || request.url.encodedPath.endsWith("users/anon/signup", true)
-                || request.url.encodedPath.endsWith("users/password/forgot", true)
-            ) {
-                request.headers.remove("token")
-            }
-            execute(request)
-        }
+//        client.plugin(HttpSend).intercept { request ->
+//            Log.d(TAG, "request=$request")
+//            if (request.url.encodedPath.endsWith("users/password/login", true)
+//                || request.url.encodedPath.endsWith("users/password/signup", true)
+//                || request.url.encodedPath.endsWith("users/anon/signup", true)
+//                || request.url.encodedPath.endsWith("users/password/forgot", true)
+//            ) {
+//                request.headers.remove("token")
+//            }
+//            execute(request)
+//        }
         client
     }
 }
