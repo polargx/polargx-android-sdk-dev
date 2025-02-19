@@ -59,8 +59,6 @@ class LinkAttribution(
     private var isAppInitialed: Boolean? = null
 
     private var mEventTrackingJob: Job? = null
-    private var mGetLinkJob: Job? = null
-
 
     private var mLastLink: LinkDataModel? = null
 
@@ -75,6 +73,7 @@ class LinkAttribution(
         var isLoggingEnabled = true
 
         private var mInitAppJob: Job? = null
+        private var mGetLinkJob: Job? = null
 
         private var mLastUri: Uri? = null
 
@@ -115,6 +114,8 @@ class LinkAttribution(
                 instance?.startInitializingApp()
                 if (mLastUri != null) {
                     instance?.init(mLastActivity, mLastUri)
+                } else {
+                    mLastListener?.onInitFinished(null, null)
                 }
                 instance?.initListener()
             }
@@ -126,13 +127,17 @@ class LinkAttribution(
             listener: LinkInitListener
         ) {
             LALogger.d(TAG, "init: uri=$uri")
-            LALogger.d(TAG, "init: uri=$uri")
-            isReInitializing = false
-            mLastUri = uri
-            mLastActivity = activity
-            mLastListener = listener
-            if (isAppInitializing()) return
-            instance?.init(activity = activity, uri = uri)
+            if (mGetLinkJob?.isActive == true) {
+                mGetLinkJob?.cancel()
+            }
+            mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
+                isReInitializing = false
+                mLastUri = uri
+                mLastActivity = activity
+                mLastListener = listener
+                if (isAppInitializing()) return@launch
+                instance?.init(activity = activity, uri = uri)
+            }
         }
 
         fun reInit(
@@ -140,12 +145,18 @@ class LinkAttribution(
             uri: Uri?,
             listener: LinkInitListener
         ) {
-            isReInitializing = true
-            mLastUri = uri
-            mLastActivity = activity
-            mLastListener = listener
-            if (isAppInitializing()) return
-            instance?.reInit(activity = activity, uri = uri)
+            LALogger.d(TAG, "reInit: uri=$uri")
+            if (mGetLinkJob?.isActive == true) {
+                mGetLinkJob?.cancel()
+            }
+            mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
+                isReInitializing = true
+                mLastUri = uri
+                mLastActivity = activity
+                mLastListener = listener
+                if (isAppInitializing()) return@launch
+                instance?.reInit(activity = activity, uri = uri)
+            }
         }
     }
 
@@ -348,7 +359,10 @@ class LinkAttribution(
                             val request = EventTrackRequest.from(event)
                             val response = eventRepository.rawTrack(request)
                             if (response.status.isSuccess()) {
-                                LALogger.d(TAG, "startTrackingQueueIfNeeded: successful ✅, event=$event")
+                                LALogger.d(
+                                    TAG,
+                                    "startTrackingQueueIfNeeded: successful ✅, event=$event"
+                                )
                                 val latestEventList =
                                     eventRepository.getCacheEventList()?.toMutableList()
                                 latestEventList?.remove(event)
@@ -389,94 +403,90 @@ class LinkAttribution(
         }
     }
 
-    fun init(activity: Activity?, uri: Uri?) {
+    suspend fun init(activity: Activity?, uri: Uri?) {
         handleFetchLinkData(activity = activity)
     }
 
-    fun reInit(activity: Activity?, uri: Uri?) {
+    suspend fun reInit(activity: Activity?, uri: Uri?) {
         handleFetchLinkData(activity = activity)
     }
 
-    private fun handleFetchLinkData(activity: Activity?) {
+    private suspend fun handleFetchLinkData(activity: Activity?) {
         if (activity == null) return
-        if (mGetLinkJob?.isActive == true) {
-            mGetLinkJob?.cancel()
+        val domain = mLastUri?.host
+        if (domain?.endsWith(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX) != true) {
+            LALogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+            mLastListener?.onInitFinished(null, null)
+            return
         }
-        mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            val domain = mLastUri?.host
-            if (domain?.endsWith(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX) != true) {
-                LALogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
-                return@launch
-            }
-            val subDomain = domain.replace(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX, "")
-            val path = mLastUri?.path?.replace("/", "")
-            val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
-                activity,
-                mKronosClock.getCurrentTimeMs()
-            )
-            val clickTime = Calendar.getInstance().apply {
-                timeInMillis = mKronosClock.getCurrentTimeMs()
-            }
-            if (!mLastUri?.path.isNullOrEmpty()) {
-                try {
-                    val getLinkResponse = linkRepository.fetchLinkData(
-                        domain = subDomain,
-                        slug = path
-                    )
-                    mLastLink = getLinkResponse.data?.sdkLinkData?.toExternal()
-
-                    val trackRequest = LinkTrackRequest(
-                        clickTime = DateTimeUtils.calendarToString(
-                            clickTime,
-                            LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
-                            LinkAttributionConstants.DateTime.utcTimeZone,
-                        ),
-                        domain = subDomain,
-                        slug = path,
-                        fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
-                        trackType = LinkTrackRequest.TrackType.APP_CLICK,
-                        deviceData = mutableMapOf(),
-                        additionalData = mutableMapOf(),
-                    )
-                    val trackResponse = linkRepository.track(trackRequest)
-                    val linkClickUnid = trackResponse.data?.linkClick?.unid
-                    val request = LinkClickRequest(sdkUsed = true)
-                    linkRepository.linkClick(linkClickUnid, request)
-                    mLastListener?.onInitFinished(mLastLink?.data, null)
-                } catch (throwable: Throwable) {
-                    mLastListener?.onInitFinished(null, throwable)
-                }
-                return@launch
-            }
-            if (isFirstTimeLaunch && mLastUri?.path.isNullOrEmpty()) {
-                val windowMetrics =
-                    if (activity == null) null else WindowMetricsCalculator.getOrCreate()
-                        .computeCurrentWindowMetrics(activity)
-                val width = windowMetrics?.bounds?.width()
-                val height = windowMetrics?.bounds?.height()
-
-                // Get density using Resources
-                val metrics = activity?.resources?.displayMetrics
-                val density = metrics?.density
-                val densityDpi = metrics?.densityDpi
-
-                LALogger.d(
-                    TAG, "initSession: " +
-                            "\nIP4Address=${application.getIP4Address()}" +
-                            "\nIP6Address=${application.getIP6Address()}" +
-                            "\nosVersion=${application.getOsVersion()}" +
-                            "\nsdkVersion=${application.getSdkVersion()}" +
-                            "\ndeviceModel=${application.getDeviceModel()}" +
-                            "\nmanufacturer=${application.getManufacturer()}" +
-                            "\ndeviceName=${application.getDeviceName()}" +
-                            "\nwindow.width=${width}" +
-                            "\nwindow.height=${height}" +
-                            "\nwindow.density=${density}" +
-                            "\nwindow.densityDpi=${densityDpi}"
+        val subDomain = domain.replace(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX, "")
+        val path = mLastUri?.path?.replace("/", "")
+        val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
+            activity,
+            mKronosClock.getCurrentTimeMs()
+        )
+        val clickTime = Calendar.getInstance().apply {
+            timeInMillis = mKronosClock.getCurrentTimeMs()
+        }
+        if (!mLastUri?.path.isNullOrEmpty()) {
+            try {
+                val getLinkResponse = linkRepository.fetchLinkData(
+                    domain = subDomain,
+                    slug = path
                 )
+                mLastLink = getLinkResponse.data?.sdkLinkData?.toExternal()
+
+                val trackRequest = LinkTrackRequest(
+                    clickTime = DateTimeUtils.calendarToString(
+                        clickTime,
+                        LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                        LinkAttributionConstants.DateTime.utcTimeZone,
+                    ),
+                    domain = subDomain,
+                    slug = path,
+                    fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
+                    trackType = LinkTrackRequest.TrackType.APP_CLICK,
+                    deviceData = mutableMapOf(),
+                    additionalData = mutableMapOf(),
+                )
+                val trackResponse = linkRepository.track(trackRequest)
+                val linkClickUnid = trackResponse.data?.linkClick?.unid
+                val request = LinkClickRequest(sdkUsed = true)
+                linkRepository.linkClick(linkClickUnid, request)
+                mLastListener?.onInitFinished(mLastLink?.data, null)
+            } catch (throwable: Throwable) {
+                mLastListener?.onInitFinished(null, throwable)
+            }
+            return
+        }
+        if (isFirstTimeLaunch && mLastUri?.path.isNullOrEmpty()) {
+            val windowMetrics =
+                if (activity == null) null else WindowMetricsCalculator.getOrCreate()
+                    .computeCurrentWindowMetrics(activity)
+            val width = windowMetrics?.bounds?.width()
+            val height = windowMetrics?.bounds?.height()
+
+            // Get density using Resources
+            val metrics = activity?.resources?.displayMetrics
+            val density = metrics?.density
+            val densityDpi = metrics?.densityDpi
+
+            LALogger.d(
+                TAG, "initSession: " +
+                        "\nIP4Address=${application.getIP4Address()}" +
+                        "\nIP6Address=${application.getIP6Address()}" +
+                        "\nosVersion=${application.getOsVersion()}" +
+                        "\nsdkVersion=${application.getSdkVersion()}" +
+                        "\ndeviceModel=${application.getDeviceModel()}" +
+                        "\nmanufacturer=${application.getManufacturer()}" +
+                        "\ndeviceName=${application.getDeviceName()}" +
+                        "\nwindow.width=${width}" +
+                        "\nwindow.height=${height}" +
+                        "\nwindow.density=${density}" +
+                        "\nwindow.densityDpi=${densityDpi}"
+            )
 //                linkRepository.fetchLinkMatches()
 //                getLinkByMatching()
-            }
         }
     }
 
