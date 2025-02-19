@@ -17,12 +17,6 @@
             <option value="$PROJECT_DIR$/data/products" />
             <option value="$PROJECT_DIR$/data/shared" />
             <option value="$PROJECT_DIR$/data/users" />
-            <option value="$PROJECT_DIR$/feature" />
-            <option value="$PROJECT_DIR$/feature/auth" />
-            <option value="$PROJECT_DIR$/feature/main" />
-            <option value="$PROJECT_DIR$/feature/onboarding" />
-            <option value="$PROJECT_DIR$/feature/settings" />
-            <option value="$PROJECT_DIR$/feature/shared" />
             <option value="$PROJECT_DIR$/library" />
             <option value="$PROJECT_DIR$/library/core" />
             <option value="$PROJECT_DIR$/library/link-attribution" />

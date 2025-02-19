@@ -5,6 +5,7 @@ import android.util.Log
 import com.library.link_attribution.BuildConfig
 import com.library.link_attribution.LinkAttribution
 import com.library.link_attribution.LinkAttribution.Companion.TAG
+import com.library.link_attribution.logger.LALogger
 import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.event.EventRepository
 import com.library.link_attribution.repository.event.EventRepositoryImpl
@@ -23,7 +24,6 @@ import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpResponseValidator
-import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -31,14 +31,12 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.plugin
 import io.ktor.client.request.headers
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLProtocol
 import io.ktor.http.append
-import io.ktor.http.encodedPath
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -90,7 +88,7 @@ val linkAttributeModule = module {
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
-                        Log.i("HttpClient", message)
+                        LALogger.i("HttpClient", message)
                     }
                 }
                 level = LogLevel.ALL
@@ -111,14 +109,14 @@ val linkAttributeModule = module {
 
             HttpResponseValidator {
                 validateResponse { response ->
-                    Log.d(TAG, "validateResponse: response=$response")
+                    LALogger.d(TAG, "validateResponse: response=$response")
                     if (!response.status.isSuccess()) {
                         throw ClientRequestException(response, "")
                     }
                 }
 
                 handleResponseExceptionWithRequest { cause, request ->
-                    Log.d(
+                    LALogger.d(
                         TAG,
                         "handleResponseExceptionWithRequest: cause=$cause, request=$request"
                     )
@@ -126,7 +124,7 @@ val linkAttributeModule = module {
                         if (cause !is ClientRequestException) throw cause
                         val errorData = cause.response.bodyAsText()
                         val error = ApiError(errorData)
-                        Log.d(
+                        LALogger.d(
                             TAG,
                             "handleResponseExceptionWithRequest: error=${error}, errorData=${errorData}"
                         )
@@ -135,7 +133,7 @@ val linkAttributeModule = module {
                         }
                         throw ApiError(errorData)
                     } catch (ex: Throwable) {
-                        Log.d(TAG, "response: ex=${ex}")
+                        LALogger.d(TAG, "response: ex=${ex}")
                         throw ex
                     }
                 }
@@ -144,7 +142,7 @@ val linkAttributeModule = module {
         }
 
 //        client.plugin(HttpSend).intercept { request ->
-//            Log.d(TAG, "request=$request")
+//            LALogger.d(TAG, "request=$request")
 //            if (request.url.encodedPath.endsWith("users/password/login", true)
 //                || request.url.encodedPath.endsWith("users/password/signup", true)
 //                || request.url.encodedPath.endsWith("users/anon/signup", true)

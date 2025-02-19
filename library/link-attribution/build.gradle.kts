@@ -68,6 +68,8 @@ dependencies {
 
     implementation(libs.androidx.window)
 
+    implementation(libs.androidx.lifecycle.process)
+
     // Ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
@@ -98,11 +100,15 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.infinitech-dev" // Replace with your GitHub username
                 artifactId = "linkAttribution" // Replace with your library's name (e.g., my-awesome-library)
-                version = "1.0.2" // Initial version number (important!)
+                version = "1.0.3" // Initial version number (important!)
 
                 afterEvaluate {
                     from(components["release"])
                 }
+                //publish github
+//                git commit -m "Initial library release"
+//                git tag -a v1.0.0 -m "Version 1.0.0"
+//                git push origin main --tags
             }
         }
     }

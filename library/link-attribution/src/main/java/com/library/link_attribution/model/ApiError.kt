@@ -1,7 +1,7 @@
 package com.library.link_attribution.model
 
 import android.os.Parcelable
-import com.library.link_attribution.logger.DebugLogger
+import com.library.link_attribution.logger.LALogger
 import com.library.link_attribution.model.extension.json.getEvenNonExisted
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
@@ -29,7 +29,7 @@ data class ApiError(
             message = jsonObj.getEvenNonExisted("message") as? String?
             apiVersion = jsonObj.getEvenNonExisted("api_version") as? Double?
         } catch (ex: Throwable) {
-            DebugLogger.d("ApiError", "ex=$ex")
+            LALogger.d("ApiError", "ex=$ex")
         }
     }
 }

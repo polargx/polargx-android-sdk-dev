@@ -2,9 +2,8 @@ package com.library.link_attribution
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.Context
+import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.link_attribution.di.linkAttributeModule
 import com.library.link_attribution.extension.getDeviceModel
@@ -14,7 +13,9 @@ import com.library.link_attribution.extension.getIP6Address
 import com.library.link_attribution.extension.getManufacturer
 import com.library.link_attribution.extension.getOsVersion
 import com.library.link_attribution.extension.getSdkVersion
+import com.library.link_attribution.lifecycle.AppLifecycleMonitor
 import com.library.link_attribution.listener.LinkInitListener
+import com.library.link_attribution.logger.LALogger
 import com.library.link_attribution.model.configs.ConfigsModel
 import com.library.link_attribution.repository.event.EventRepository
 import com.library.link_attribution.repository.event.model.EventModel
@@ -44,10 +45,9 @@ import org.koin.core.context.startKoin
 import java.net.ConnectException
 import java.net.UnknownHostException
 import java.util.Calendar
-import java.util.TimeZone
 
 class LinkAttribution(
-    private val context: Context,
+    private val application: Application,
     private val appId: String?,
 ) : KoinComponent {
 
@@ -58,16 +58,12 @@ class LinkAttribution(
 
     private var isAppInitialed: Boolean? = null
 
-    private var mInitAppJob: Job? = null
     private var mEventTrackingJob: Job? = null
     private var mGetLinkJob: Job? = null
 
-    private var mUri: Uri? = null
-    private var isReInitializing: Boolean? = null
 
     private var mLastLink: LinkDataModel? = null
 
-    private var mListener: LinkInitListener? = null
 
     companion object {
         const val TAG = ">>>LinkAttribution"
@@ -76,50 +72,84 @@ class LinkAttribution(
         @SuppressLint("StaticFieldLeak")
         private var instance: LinkAttribution? = null
         private var mConfigs: ConfigsModel? = null
+        var isLoggingEnabled = true
+
+        private var mInitAppJob: Job? = null
+
+        private var mLastUri: Uri? = null
+
+        @SuppressLint("StaticFieldLeak")
+        private var mLastActivity: Activity? = null
+        private var mLastListener: LinkInitListener? = null
+        private var isReInitializing: Boolean? = null
 
         fun getConfigs(): ConfigsModel? {
             return mConfigs
         }
 
+        fun isAppInitializing(): Boolean {
+            return mInitAppJob?.isActive == true
+        }
+
         fun initApp(
-            context: Context,
+            application: Application,
             appId: String?,
             apiKey: String?,
         ) {
-            mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
-            if (instance == null) {
-                instance = LinkAttribution(
-                    context = context,
-                    appId = appId,
-                ).apply {
-                    startInject()
-                    mKronosClock = AndroidClockFactory.createKronosClock(context)
-                    mKronosClock.syncInBackground()
-                }
+            if (mInitAppJob?.isActive == true) {
+                mInitAppJob?.cancel()
+                mInitAppJob = null
             }
-            instance?.startInitializingApp()
+            mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
+                mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
+                if (instance == null) {
+                    instance = LinkAttribution(
+                        application = application,
+                        appId = appId,
+                    ).apply {
+                        startInject()
+                        mKronosClock = AndroidClockFactory.createKronosClock(application)
+                        mKronosClock.sync()
+                    }
+                }
+                instance?.startInitializingApp()
+                if (mLastUri != null) {
+                    instance?.init(mLastActivity, mLastUri)
+                }
+                instance?.initListener()
+            }
         }
 
         fun init(
-            activity: Activity,
+            activity: Activity?,
             uri: Uri?,
             listener: LinkInitListener
         ) {
-            instance?.mListener = listener
+            LALogger.d(TAG, "init: uri=$uri")
+            LALogger.d(TAG, "init: uri=$uri")
+            isReInitializing = false
+            mLastUri = uri
+            mLastActivity = activity
+            mLastListener = listener
+            if (isAppInitializing()) return
             instance?.init(activity = activity, uri = uri)
         }
 
         fun reInit(
-            activity: Activity,
+            activity: Activity?,
             uri: Uri?,
             listener: LinkInitListener
         ) {
-            instance?.mListener = listener
+            isReInitializing = true
+            mLastUri = uri
+            mLastActivity = activity
+            mLastListener = listener
+            if (isAppInitializing()) return
             instance?.reInit(activity = activity, uri = uri)
         }
     }
 
-    fun isKoinStarted(): Boolean {
+    private fun isKoinStarted(): Boolean {
         return GlobalContext.getOrNull() != null
     }
 
@@ -130,79 +160,135 @@ class LinkAttribution(
         }
         startKoin {
             androidLogger()
-            androidContext(context)
+            androidContext(application)
             modules(linkAttributeModule)
         }
     }
 
-    fun isAppInitializing(): Boolean {
-        return mInitAppJob?.isActive == true
-    }
-
-    fun startInitializingApp() {
-        if (mInitAppJob?.isActive == true) return
-        mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
-            reset()
-            var shouldRetry = true
-            do {
-                try {
-                    val now = Calendar.getInstance().apply {
-                        timeInMillis = mKronosClock.getCurrentTimeMs()
+    suspend fun startInitializingApp() {
+        reset()
+        var shouldRetry = true
+        do {
+            try {
+                val now = Calendar.getInstance().apply {
+                    timeInMillis = mKronosClock.getCurrentTimeMs()
+                }
+                val launchEvent = EventModel(
+                    organizationUnid = appId,
+                    eventName = EventModel.Type.APP_LAUNCH,
+                    eventTime = DateTimeUtils.calendarToString(
+                        source = now,
+                        format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                        timeZone = LinkAttributionConstants.DateTime.utcTimeZone,
+                    ),
+                    data = mutableMapOf()
+                )
+                val request = EventTrackRequest.from(launchEvent)
+                val response = eventRepository.rawTrack(request)
+                if (response.status.isSuccess()) {
+                    LALogger.d(TAG, "startInitializingApp: successful ✅")
+                    isAppInitialed = true
+                    shouldRetry = false
+                }
+                if (response.status.value == 403) {
+                    LALogger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
+                    shouldRetry = false
+                }
+            } catch (throwable: Throwable) {
+                when (throwable) {
+                    is ConnectException -> {
+                        // Handle connection refused or other connection issues (no internet)
+                        LALogger.d(
+                            TAG,
+                            "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
+                        )
+                        shouldRetry = true
+                        delay(1000)
                     }
-                    val launchEvent = EventModel(
-                        organizationUnid = appId,
-                        eventName = EventModel.Type.APP_LAUNCH,
-                        eventTime = DateTimeUtils.calendarToString(
-                            source = now,
-                            format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
-                            timeZone = LinkAttributionConstants.DateTime.utcTimeZone,
-                        ),
-                        data = mutableMapOf()
-                    )
-                    val request = EventTrackRequest.from(launchEvent)
-                    val response = eventRepository.rawTrack(request)
-                    if (response.status.isSuccess()) {
-                        Log.d(TAG, "startInitializingApp: successful ✅")
-                        isAppInitialed = true
+
+                    is UnknownHostException -> {
+                        // Handle DNS resolution failures (no internet or incorrect URL)
+                        LALogger.d(
+                            TAG,
+                            "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
+                        )
+                        shouldRetry = true
+                        delay(1000)
+                    }
+
+                    else -> {
+                        // Handle other exceptions (e.g., server errors, JSON parsing)
+                        LALogger.d(
+                            TAG,
+                            "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
+                        )
                         shouldRetry = false
-                    }
-                    if (response.status.value == 403) {
-                        Log.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
-                        shouldRetry = false
-                    }
-                } catch (throwable: Throwable) {
-                    when (throwable) {
-                        is ConnectException -> {
-                            // Handle connection refused or other connection issues (no internet)
-                            Log.d(
-                                TAG,
-                                "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
-                            )
-                            shouldRetry = true
-                            delay(1000)
-                        }
-
-                        is UnknownHostException -> {
-                            // Handle DNS resolution failures (no internet or incorrect URL)
-                            Log.d(
-                                TAG,
-                                "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
-                            )
-                            shouldRetry = true
-                            delay(1000)
-                        }
-
-                        else -> {
-                            // Handle other exceptions (e.g., server errors, JSON parsing)
-                            Log.d(
-                                TAG,
-                                "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
-                            )
-                            shouldRetry = false
-                        }
                     }
                 }
-            } while (shouldRetry)
+            }
+        } while (shouldRetry)
+    }
+
+    private fun initListener() {
+        CoroutineScope(Dispatchers.Main).launch {
+            application.registerActivityLifecycleCallbacks(
+                AppLifecycleMonitor(object : AppLifecycleMonitor.Listener {
+
+                    override fun onAppForegrounded() {
+                        LALogger.d(TAG, "onAppForegrounded:")
+                        instance?.trackEvent(
+                            type = EventModel.Type.APP_OPEN,
+                            data = mutableMapOf()
+                        )
+                    }
+
+                    override fun onAppBackgrounded() {
+                        LALogger.d(TAG, "onAppBackgrounded:")
+                        instance?.trackEvent(
+                            type = EventModel.Type.APP_CLOSE,
+                            data = mutableMapOf()
+                        )
+                    }
+
+                    override fun onAppFirstActivityCreated() {
+//                    Logger.d(TAG, "onAppFirstActivityCreated")
+
+                    }
+
+                    override fun onAppOpenWhenApplicationAlive() {
+//                    Logger.d(TAG, "onAppOpenWhenApplicationAlive")
+
+                    }
+
+                    override fun onAppGoToForeground() {
+//                    Logger.d(TAG, "onAppGoToForeground")
+//                    instance?.trackEvent(
+//                        type = EventModel.Type.APP_OPEN,
+//                        data = mutableMapOf()
+//                    )
+                    }
+
+                    override fun onAppGoToBackgroundViaHomeButton(foregroundActivity: Activity?) {
+//                    Logger.d(
+//                        TAG,
+//                        "onAppGoToBackgroundViaHomeButton: foregroundActivity=$foregroundActivity"
+//                    )
+//                    instance?.trackEvent(
+//                        type = EventModel.Type.APP_CLOSE,
+//                        data = mutableMapOf()
+//                    )
+                    }
+
+                    override fun onAppGoToBackgroundViaBackLastActivity(lastActivity: Activity?) {
+//                    Logger.d(TAG, "onAppGoToBackgroundViaBackLastActivity: lastActivity=$lastActivity")
+//                    instance?.trackEvent(
+//                        type = EventModel.Type.APP_TERMINATE,
+//                        data = mutableMapOf()
+//                    )
+                    }
+
+                })
+            )
         }
     }
 
@@ -233,9 +319,14 @@ class LinkAttribution(
             val event = EventModel(
                 organizationUnid = appId,
                 eventName = type,
+//                eventTime = DateTimeUtils.calendarToString(
+//                    source = time,
+//                    format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+//                ),
                 eventTime = DateTimeUtils.calendarToString(
                     source = time,
                     format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
+                    timeZone = LinkAttributionConstants.DateTime.utcTimeZone,
                 ),
                 data = data
             )
@@ -253,14 +344,42 @@ class LinkAttribution(
                 if (eventList.isEmpty()) return@launch
                 eventList.toMutableList().map { event ->
                     async {
-                        val request = EventTrackRequest.from(event)
-                        val response = eventRepository.rawTrack(request)
-                        if (response.status.isSuccess()) {
-                            Log.d(TAG, "startTrackingQueueIfNeeded: successful ✅, event=$event")
-                            val latestEventList =
-                                eventRepository.getCacheEventList()?.toMutableList()
-                            latestEventList?.remove(event)
-                            eventRepository.setCacheEventList(latestEventList)
+                        try {
+                            val request = EventTrackRequest.from(event)
+                            val response = eventRepository.rawTrack(request)
+                            if (response.status.isSuccess()) {
+                                LALogger.d(TAG, "startTrackingQueueIfNeeded: successful ✅, event=$event")
+                                val latestEventList =
+                                    eventRepository.getCacheEventList()?.toMutableList()
+                                latestEventList?.remove(event)
+                                eventRepository.setCacheEventList(latestEventList)
+                            } else {
+                                val latestEventList =
+                                    eventRepository.getCacheEventList()?.toMutableList()
+                                latestEventList?.remove(event)
+                                eventRepository.setCacheEventList(latestEventList)
+                            }
+                        } catch (throwable: Throwable) {
+                            LALogger.d(
+                                TAG,
+                                "startTrackingQueueIfNeeded: ⛔error: ex=$throwable, event=$event"
+                            )
+                            when (throwable) {
+                                is ConnectException -> {
+                                    // Handle connection refused or other connection issues (no internet)
+                                }
+
+                                is UnknownHostException -> {
+                                    // Handle DNS resolution failures (no internet or incorrect URL)
+                                }
+
+                                else -> {
+                                    val latestEventList =
+                                        eventRepository.getCacheEventList()?.toMutableList()
+                                    latestEventList?.remove(event)
+                                    eventRepository.setCacheEventList(latestEventList)
+                                }
+                            }
                         }
                     }
                 }.awaitAll()
@@ -271,29 +390,26 @@ class LinkAttribution(
     }
 
     fun init(activity: Activity?, uri: Uri?) {
-        isReInitializing = false
-        mUri = uri ?: activity?.intent?.data
         handleFetchLinkData(activity = activity)
     }
 
     fun reInit(activity: Activity?, uri: Uri?) {
-        isReInitializing = true
-        mUri = uri ?: activity?.intent?.data
         handleFetchLinkData(activity = activity)
     }
 
     private fun handleFetchLinkData(activity: Activity?) {
+        if (activity == null) return
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            val domain = mUri?.host
+            val domain = mLastUri?.host
             if (domain?.endsWith(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX) != true) {
-                Log.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+                LALogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
                 return@launch
             }
             val subDomain = domain.replace(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX, "")
-            val path = mUri?.path?.replace("/", "")
+            val path = mLastUri?.path?.replace("/", "")
             val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
                 activity,
                 mKronosClock.getCurrentTimeMs()
@@ -301,7 +417,7 @@ class LinkAttribution(
             val clickTime = Calendar.getInstance().apply {
                 timeInMillis = mKronosClock.getCurrentTimeMs()
             }
-            if (!mUri?.path.isNullOrEmpty()) {
+            if (!mLastUri?.path.isNullOrEmpty()) {
                 try {
                     val getLinkResponse = linkRepository.fetchLinkData(
                         domain = subDomain,
@@ -326,13 +442,13 @@ class LinkAttribution(
                     val linkClickUnid = trackResponse.data?.linkClick?.unid
                     val request = LinkClickRequest(sdkUsed = true)
                     linkRepository.linkClick(linkClickUnid, request)
-                    mListener?.onInitFinished(mLastLink?.data, null)
+                    mLastListener?.onInitFinished(mLastLink?.data, null)
                 } catch (throwable: Throwable) {
-                    mListener?.onInitFinished(null, throwable)
+                    mLastListener?.onInitFinished(null, throwable)
                 }
                 return@launch
             }
-            if (isFirstTimeLaunch && mUri?.path.isNullOrEmpty()) {
+            if (isFirstTimeLaunch && mLastUri?.path.isNullOrEmpty()) {
                 val windowMetrics =
                     if (activity == null) null else WindowMetricsCalculator.getOrCreate()
                         .computeCurrentWindowMetrics(activity)
@@ -344,15 +460,15 @@ class LinkAttribution(
                 val density = metrics?.density
                 val densityDpi = metrics?.densityDpi
 
-                Log.d(
+                LALogger.d(
                     TAG, "initSession: " +
-                            "\nIP4Address=${context.getIP4Address()}" +
-                            "\nIP6Address=${context.getIP6Address()}" +
-                            "\nosVersion=${context.getOsVersion()}" +
-                            "\nsdkVersion=${context.getSdkVersion()}" +
-                            "\ndeviceModel=${context.getDeviceModel()}" +
-                            "\nmanufacturer=${context.getManufacturer()}" +
-                            "\ndeviceName=${context.getDeviceName()}" +
+                            "\nIP4Address=${application.getIP4Address()}" +
+                            "\nIP6Address=${application.getIP6Address()}" +
+                            "\nosVersion=${application.getOsVersion()}" +
+                            "\nsdkVersion=${application.getSdkVersion()}" +
+                            "\ndeviceModel=${application.getDeviceModel()}" +
+                            "\nmanufacturer=${application.getManufacturer()}" +
+                            "\ndeviceName=${application.getDeviceName()}" +
                             "\nwindow.width=${width}" +
                             "\nwindow.height=${height}" +
                             "\nwindow.density=${density}" +
@@ -365,13 +481,15 @@ class LinkAttribution(
     }
 
     private fun onInternetConnectionChanged(connected: Boolean) {
-        if (connected) {
-            if (isAppInitialed == true) {
-                startTrackingQueueIfNeeded()
-                return
+        CoroutineScope(Dispatchers.IO).launch {
+            if (connected) {
+                if (isAppInitialed == true) {
+                    startTrackingQueueIfNeeded()
+                    return@launch
+                }
+                if (isAppInitializing()) return@launch
+                startInitializingApp()
             }
-            if (isAppInitializing()) return
-            startInitializingApp()
         }
     }
 }

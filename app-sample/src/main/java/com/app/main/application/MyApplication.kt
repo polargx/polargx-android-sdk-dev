@@ -48,8 +48,9 @@ class MyApplication : BaseApplication() {
         mKronosClock = AndroidClockFactory.createKronosClock(this)
         mKronosClock.syncInBackground()
 
+        LinkAttribution.isLoggingEnabled = true
         LinkAttribution.initApp(
-            context = this,
+            application = this,
             appId = BuildConfig.BRANCH_APP_ID,
             apiKey = BuildConfig.BRANCH_API_KEY,
         )

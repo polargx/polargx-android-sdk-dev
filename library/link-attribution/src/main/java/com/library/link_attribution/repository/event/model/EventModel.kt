@@ -22,10 +22,22 @@ data class EventModel(
     @Retention(value = AnnotationRetention.SOURCE)
     @StringDef(
         Type.APP_LAUNCH,
+        Type.APP_OPEN,
+        Type.APP_CLOSE,
+        Type.APP_ACTIVE,
+        Type.APP_INACTIVE,
+        Type.APP_TERMINATE,
+        Type.APP_UNKNOWN_LIFECYCLE,
     )
     annotation class Type {
         companion object {
             const val APP_LAUNCH = "app_launch"
+            const val APP_OPEN = "app_open"
+            const val APP_CLOSE = "app_close"
+            const val APP_ACTIVE = "app_active"
+            const val APP_INACTIVE = "app_inactive"
+            const val APP_TERMINATE = "app_terminate"
+            const val APP_UNKNOWN_LIFECYCLE = "unknown_lifecycle"
         }
     }
 }

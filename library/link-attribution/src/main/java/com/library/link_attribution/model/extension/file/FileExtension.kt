@@ -6,7 +6,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 import android.util.Log
-import com.library.link_attribution.logger.DebugLogger
+import com.library.link_attribution.logger.LALogger
 
 import java.io.*
 
@@ -44,14 +44,14 @@ fun File.copy(src: File?) {
 
 fun File.logFile() {
     if (this.isDirectory) {
-        DebugLogger.d("FILE_LOG", "logFile: dir = ${this.path}, size = ${this.listFiles()?.size}")
+        LALogger.d("FILE_LOG", "logFile: dir = ${this.path}, size = ${this.listFiles()?.size}")
         this.listFiles()?.let {
             for (i in it.indices) {
                 it[i].logFile()
             }
         }
     } else {
-        DebugLogger.d("FILE_LOG", "logFile: file = ${this.path}")
+        LALogger.d("FILE_LOG", "logFile: file = ${this.path}")
     }
 }
 
