@@ -38,7 +38,8 @@ android {
             )
         }
         release {
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
+            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
+//            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -58,8 +59,6 @@ android {
 }
 
 dependencies {
-//    implementation(project(":data:shared"))
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

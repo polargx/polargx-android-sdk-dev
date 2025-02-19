@@ -69,9 +69,9 @@ android {
 
     buildTypes {
         getByName("debug") {
-            productFlavors.getByName("dev").signingConfig = signingConfigs.getByName("debug")
-            productFlavors.getByName("staging").signingConfig = signingConfigs.getByName("debug")
-            productFlavors.getByName("prod").signingConfig = signingConfigs.getByName("release")
+//            productFlavors.getByName("dev").signingConfig = signingConfigs.getByName("debug")
+//            productFlavors.getByName("staging").signingConfig = signingConfigs.getByName("debug")
+//            productFlavors.getByName("prod").signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -79,9 +79,9 @@ android {
             )
         }
         release {
-            productFlavors.getByName("dev").signingConfig = signingConfigs.getByName("debug")
-            productFlavors.getByName("staging").signingConfig = signingConfigs.getByName("debug")
-            productFlavors.getByName("prod").signingConfig = signingConfigs.getByName("release")
+//            productFlavors.getByName("dev").signingConfig = signingConfigs.getByName("debug")
+//            productFlavors.getByName("staging").signingConfig = signingConfigs.getByName("debug")
+//            productFlavors.getByName("prod").signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

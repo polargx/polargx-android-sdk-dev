@@ -112,7 +112,6 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }
 
 #google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 #firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytic" }
