@@ -175,10 +175,10 @@ dependencies {
     implementation(project(":data:users"))
     implementation(project(":data:shared"))
     implementation(project(":data:products"))
-    implementation(project(":feature:shared"))
-    implementation(project(":feature:auth"))
-    implementation(project(":feature:onboarding"))
-    implementation(project(":feature:main"))
-    implementation(project(":feature:settings"))
+//    implementation(project(":feature:shared"))
+//    implementation(project(":feature:auth"))
+//    implementation(project(":feature:onboarding"))
+//    implementation(project(":feature:main"))
+//    implementation(project(":feature:settings"))
 
 }

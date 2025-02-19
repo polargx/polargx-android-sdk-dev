@@ -12,10 +12,10 @@ import com.data.users.local.UserLocalDatasource
 import com.data.users.local.UserLocalDatasourceImpl
 import com.data.users.remote.UserRemoteDatasource
 import com.data.users.remote.UserRemoteDatasourceImpl
-import com.feature.auth.AuthenticationActivityViewModel
-import com.feature.auth.ui.landing.LandingFragmentViewModel
-import com.feature.auth.ui.login.LoginFragmentViewModel
-import com.feature.auth.ui.sign_up.SignUpFragmentViewModel
+//import com.feature.auth.AuthenticationActivityViewModel
+//import com.feature.auth.ui.landing.LandingFragmentViewModel
+//import com.feature.auth.ui.login.LoginFragmentViewModel
+//import com.feature.auth.ui.sign_up.SignUpFragmentViewModel
 import com.library.core.application.BaseApplication
 import com.app.main.application.MyApplication
 import com.app.main.application.MyApplicationContract
@@ -71,10 +71,10 @@ val appModule = module {
     viewModelOf(::SplashActivityViewModel)
 
     // Authentication
-    viewModelOf(::LandingFragmentViewModel)
-    viewModelOf(::SignUpFragmentViewModel)
-    viewModelOf(::LoginFragmentViewModel)
-    viewModelOf(::AuthenticationActivityViewModel)
+//    viewModelOf(::LandingFragmentViewModel)
+//    viewModelOf(::SignUpFragmentViewModel)
+//    viewModelOf(::LoginFragmentViewModel)
+//    viewModelOf(::AuthenticationActivityViewModel)
 
 
 

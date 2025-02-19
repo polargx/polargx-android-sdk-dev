@@ -71,5 +71,5 @@ dependencies {
     implementation(project(":library:network"))
     implementation(project(":data:users"))
     implementation(project(":data:products"))
-    implementation(project(":feature:shared"))
+//    implementation(project(":feature:shared"))
 }
