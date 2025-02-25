@@ -95,6 +95,7 @@ class LinkAttribution(
             appId: String?,
             apiKey: String?,
         ) {
+            LALogger.d(TAG, "initApp: appId=$appId, apiKey=$apiKey")
             if (mInitAppJob?.isActive == true) {
                 mInitAppJob?.cancel()
                 mInitAppJob = null
@@ -404,23 +405,23 @@ class LinkAttribution(
     }
 
     suspend fun init(activity: Activity?, uri: Uri?) {
-        handleFetchLinkData(activity = activity)
+        handleFetchLinkData(activity = activity, uri = mLastUri)
     }
 
     suspend fun reInit(activity: Activity?, uri: Uri?) {
-        handleFetchLinkData(activity = activity)
+        handleFetchLinkData(activity = activity, uri = mLastUri)
     }
 
-    private suspend fun handleFetchLinkData(activity: Activity?) {
+    private suspend fun handleFetchLinkData(activity: Activity?, uri: Uri?) {
         if (activity == null) return
-        val domain = mLastUri?.host
+        val domain = uri?.host
         if (domain?.endsWith(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX) != true) {
             LALogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
             mLastListener?.onInitFinished(null, null)
             return
         }
         val subDomain = domain.replace(LinkAttributionConstants.Configuration.DOMAIN_SUFFIX, "")
-        val path = mLastUri?.path?.replace("/", "")
+        val path = uri.path?.replace("/", "")
         val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
             activity,
             mKronosClock.getCurrentTimeMs()
@@ -428,7 +429,7 @@ class LinkAttribution(
         val clickTime = Calendar.getInstance().apply {
             timeInMillis = mKronosClock.getCurrentTimeMs()
         }
-        if (!mLastUri?.path.isNullOrEmpty()) {
+        if (!uri.path.isNullOrEmpty()) {
             try {
                 val getLinkResponse = linkRepository.fetchLinkData(
                     domain = subDomain,
@@ -449,25 +450,30 @@ class LinkAttribution(
                     deviceData = mutableMapOf(),
                     additionalData = mutableMapOf(),
                 )
-                val trackResponse = linkRepository.track(trackRequest)
-                val linkClickUnid = trackResponse.data?.linkClick?.unid
-                val request = LinkClickRequest(sdkUsed = true)
-                linkRepository.linkClick(linkClickUnid, request)
+                val clid = uri.getQueryParameter("__clid")
+                if (clid.isNullOrEmpty()) {
+                    val trackResponse = linkRepository.track(trackRequest)
+                    val linkClickUnid = trackResponse.data?.linkClick?.unid
+                    val request = LinkClickRequest(sdkUsed = true)
+                    linkRepository.linkClick(linkClickUnid, request)
+                } else {
+                    val request = LinkClickRequest(sdkUsed = true)
+                    linkRepository.linkClick(clid, request)
+                }
                 mLastListener?.onInitFinished(mLastLink?.data, null)
             } catch (throwable: Throwable) {
                 mLastListener?.onInitFinished(null, throwable)
             }
             return
         }
-        if (isFirstTimeLaunch && mLastUri?.path.isNullOrEmpty()) {
-            val windowMetrics =
-                if (activity == null) null else WindowMetricsCalculator.getOrCreate()
-                    .computeCurrentWindowMetrics(activity)
-            val width = windowMetrics?.bounds?.width()
-            val height = windowMetrics?.bounds?.height()
+        if (isFirstTimeLaunch && uri.path.isNullOrEmpty()) {
+            val windowMetrics = WindowMetricsCalculator.getOrCreate()
+                .computeCurrentWindowMetrics(activity)
+            val width = windowMetrics.bounds.width()
+            val height = windowMetrics.bounds.height()
 
             // Get density using Resources
-            val metrics = activity?.resources?.displayMetrics
+            val metrics = activity.resources?.displayMetrics
             val density = metrics?.density
             val densityDpi = metrics?.densityDpi
 

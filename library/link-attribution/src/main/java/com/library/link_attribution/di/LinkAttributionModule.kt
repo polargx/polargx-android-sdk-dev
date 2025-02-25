@@ -5,6 +5,7 @@ import android.util.Log
 import com.library.link_attribution.BuildConfig
 import com.library.link_attribution.LinkAttribution
 import com.library.link_attribution.LinkAttribution.Companion.TAG
+import com.library.link_attribution.LinkAttributionConstants
 import com.library.link_attribution.logger.LALogger
 import com.library.link_attribution.model.ApiError
 import com.library.link_attribution.repository.event.EventRepository
@@ -43,17 +44,27 @@ import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val linkAttributeModule = module {
     // Repositories
     singleOf(::LinkLocalDatasourceImpl) { bind<LinkLocalDatasource>() }
-    singleOf(::LinkRemoteDatasourceImpl) { bind<LinkRemoteDatasource>() }
-    singleOf(::LinkRepositoryImpl) { bind<LinkRepository>() }
+    single {
+        LinkRemoteDatasourceImpl(
+            client = get(named(LinkAttributionConstants.Koin.APP_HTTP_CLIENT)),
+        )
+    } bind LinkRemoteDatasource::class
+    singleOf(::LinkRepositoryImpl) bind LinkRepository::class
 
     singleOf(::EventLocalDatasourceImpl) { bind<EventLocalDatasource>() }
-    singleOf(::EventRemoteDatasourceImpl) { bind<EventRemoteDatasource>() }
-    singleOf(::EventRepositoryImpl) { bind<EventRepository>() }
+    single {
+        EventRemoteDatasourceImpl(
+            client = get(named(LinkAttributionConstants.Koin.APP_HTTP_CLIENT)),
+        )
+    } bind EventRemoteDatasource::class
+    singleOf(::EventRepositoryImpl) bind EventRepository::class
 
 
     single {
@@ -63,7 +74,7 @@ val linkAttributeModule = module {
         )
     }
 
-    single {
+    single(named(LinkAttributionConstants.Koin.APP_HTTP_CLIENT)) {
         val client = HttpClient(Android) {
             engine {
                 socketTimeout = 60_000

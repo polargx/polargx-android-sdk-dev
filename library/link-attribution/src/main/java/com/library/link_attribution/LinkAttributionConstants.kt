@@ -3,6 +3,11 @@ package com.library.link_attribution
 import java.util.TimeZone
 
 object LinkAttributionConstants {
+
+    object Koin {
+        const val APP_HTTP_CLIENT = "LinkAttributionConstants.Koin.APP_HTTP_CLIENT"
+    }
+
     object Configuration {
         const val DOMAIN_SUFFIX = ".makelabs.ai"
     }
