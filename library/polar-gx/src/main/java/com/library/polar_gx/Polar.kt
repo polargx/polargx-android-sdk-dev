@@ -5,7 +5,8 @@ import android.app.Activity
 import android.app.Application
 import android.net.Uri
 import androidx.window.layout.WindowMetricsCalculator
-import com.library.polar_gx.di.linkAttributeModule
+import com.library.polar_gx.configuration.Configuration
+import com.library.polar_gx.di.polarModule
 import com.library.polar_gx.extension.getDeviceModel
 import com.library.polar_gx.extension.getDeviceName
 import com.library.polar_gx.extension.getIP4Address
@@ -15,7 +16,7 @@ import com.library.polar_gx.extension.getOsVersion
 import com.library.polar_gx.extension.getSdkVersion
 import com.library.polar_gx.lifecycle.AppLifecycleMonitor
 import com.library.polar_gx.listener.LinkInitListener
-import com.library.polar_gx.logger.LALogger
+import com.library.polar_gx.logger.PolarLogger
 import com.library.polar_gx.model.configs.ConfigsModel
 import com.library.polar_gx.repository.event.EventRepository
 import com.library.polar_gx.repository.event.model.EventModel
@@ -46,7 +47,7 @@ import java.net.ConnectException
 import java.net.UnknownHostException
 import java.util.Calendar
 
-class PolarGX(
+class Polar(
     private val application: Application,
     private val appId: String?,
 ) : KoinComponent {
@@ -64,11 +65,10 @@ class PolarGX(
 
 
     companion object {
-        const val TAG = ">>>PolarGX"
-        const val ENDPOINT = "jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev"
+        const val TAG = ">>>Polar"
 
         @SuppressLint("StaticFieldLeak")
-        private var instance: PolarGX? = null
+        private var instance: Polar? = null
         private var mConfigs: ConfigsModel? = null
 
         var isDevelopmentEnabled = false
@@ -97,7 +97,7 @@ class PolarGX(
             appId: String?,
             apiKey: String?,
         ) {
-            LALogger.d(TAG, "initApp: appId=$appId, apiKey=$apiKey")
+            PolarLogger.d(TAG, "initApp: appId=$appId, apiKey=$apiKey")
             if (mInitAppJob?.isActive == true) {
                 mInitAppJob?.cancel()
                 mInitAppJob = null
@@ -105,7 +105,7 @@ class PolarGX(
             mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
                 mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
                 if (instance == null) {
-                    instance = PolarGX(
+                    instance = Polar(
                         application = application,
                         appId = appId,
                     ).apply {
@@ -129,7 +129,7 @@ class PolarGX(
             uri: Uri?,
             listener: LinkInitListener
         ) {
-            LALogger.d(TAG, "init: uri=$uri")
+            PolarLogger.d(TAG, "init: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
                 mGetLinkJob?.cancel()
             }
@@ -148,7 +148,7 @@ class PolarGX(
             uri: Uri?,
             listener: LinkInitListener
         ) {
-            LALogger.d(TAG, "reInit: uri=$uri")
+            PolarLogger.d(TAG, "reInit: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
                 mGetLinkJob?.cancel()
             }
@@ -169,13 +169,13 @@ class PolarGX(
 
     private fun startInject() {
         if (isKoinStarted()) {
-            loadKoinModules(linkAttributeModule)
+            loadKoinModules(polarModule)
             return
         }
         startKoin {
             androidLogger()
             androidContext(application)
-            modules(linkAttributeModule)
+            modules(polarModule)
         }
     }
 
@@ -192,27 +192,30 @@ class PolarGX(
                     eventName = EventModel.Type.APP_LAUNCH,
                     eventTime = DateTimeUtils.calendarToString(
                         source = now,
-                        format = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
-                        timeZone = PolarGXConstants.DateTime.utcTimeZone,
+                        format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
+                        timeZone = PolarConstants.DateTime.utcTimeZone,
                     ),
-                    data = mutableMapOf()
+                    data = mapOf()
                 )
                 val request = EventTrackRequest.from(launchEvent)
                 val response = eventRepository.rawTrack(request)
                 if (response.status.isSuccess()) {
-                    LALogger.d(TAG, "startInitializingApp: successful ✅")
+                    PolarLogger.d(
+                        TAG,
+                        "startInitializingApp: successful ✅ with ${Configuration.Env.name} environment"
+                    )
                     isAppInitialed = true
                     shouldRetry = false
                 }
                 if (response.status.value == 403) {
-                    LALogger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
+                    PolarLogger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
                     shouldRetry = false
                 }
             } catch (throwable: Throwable) {
                 when (throwable) {
                     is ConnectException -> {
                         // Handle connection refused or other connection issues (no internet)
-                        LALogger.d(
+                        PolarLogger.d(
                             TAG,
                             "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
                         )
@@ -222,7 +225,7 @@ class PolarGX(
 
                     is UnknownHostException -> {
                         // Handle DNS resolution failures (no internet or incorrect URL)
-                        LALogger.d(
+                        PolarLogger.d(
                             TAG,
                             "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
                         )
@@ -232,7 +235,7 @@ class PolarGX(
 
                     else -> {
                         // Handle other exceptions (e.g., server errors, JSON parsing)
-                        LALogger.d(
+                        PolarLogger.d(
                             TAG,
                             "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
                         )
@@ -249,7 +252,7 @@ class PolarGX(
                 AppLifecycleMonitor(object : AppLifecycleMonitor.Listener {
 
                     override fun onAppForegrounded() {
-                        LALogger.d(TAG, "onAppForegrounded:")
+                        PolarLogger.d(TAG, "onAppForegrounded:")
                         instance?.trackEvent(
                             type = EventModel.Type.APP_OPEN,
                             data = mutableMapOf()
@@ -257,7 +260,7 @@ class PolarGX(
                     }
 
                     override fun onAppBackgrounded() {
-                        LALogger.d(TAG, "onAppBackgrounded:")
+                        PolarLogger.d(TAG, "onAppBackgrounded:")
                         instance?.trackEvent(
                             type = EventModel.Type.APP_CLOSE,
                             data = mutableMapOf()
@@ -339,8 +342,8 @@ class PolarGX(
 //                ),
                 eventTime = DateTimeUtils.calendarToString(
                     source = time,
-                    format = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
-                    timeZone = PolarGXConstants.DateTime.utcTimeZone,
+                    format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
+                    timeZone = PolarConstants.DateTime.utcTimeZone,
                 ),
                 data = data
             )
@@ -362,7 +365,7 @@ class PolarGX(
                             val request = EventTrackRequest.from(event)
                             val response = eventRepository.rawTrack(request)
                             if (response.status.isSuccess()) {
-                                LALogger.d(
+                                PolarLogger.d(
                                     TAG,
                                     "startTrackingQueueIfNeeded: successful ✅, event=$event"
                                 )
@@ -377,7 +380,7 @@ class PolarGX(
                                 eventRepository.setCacheEventList(latestEventList)
                             }
                         } catch (throwable: Throwable) {
-                            LALogger.d(
+                            PolarLogger.d(
                                 TAG,
                                 "startTrackingQueueIfNeeded: ⛔error: ex=$throwable, event=$event"
                             )
@@ -416,14 +419,17 @@ class PolarGX(
 
     private suspend fun handleFetchLinkData(activity: Activity?, uri: Uri?) {
         if (activity == null) return
-        val domain = uri?.host
-        if (domain?.endsWith(PolarGXConstants.Configuration.DOMAIN_SUFFIX) != true) {
-            LALogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+        val supportedBaseDomains = Configuration.Env.supportedBaseDomains
+        val domain = uri?.host ?: ""
+//        if (domain?.endsWith(PolarConstants.Configuration.DOMAIN_SUFFIX) != true) {
+        if (!domain.endsWith(supportedBaseDomains)) {
+            PolarLogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
             mLastListener?.onInitFinished(null, null)
             return
         }
-        val subDomain = domain.replace(PolarGXConstants.Configuration.DOMAIN_SUFFIX, "")
-        val path = uri.path?.replace("/", "")
+//        val subDomain = domain.replace(PolarConstants.Configuration.DOMAIN_SUFFIX, "")
+        val subDomain = domain.replace(supportedBaseDomains, "")
+        val path = uri?.path?.replace("/", "")
         val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
             activity,
             mKronosClock.getCurrentTimeMs()
@@ -431,7 +437,7 @@ class PolarGX(
         val clickTime = Calendar.getInstance().apply {
             timeInMillis = mKronosClock.getCurrentTimeMs()
         }
-        if (!uri.path.isNullOrEmpty()) {
+        if (!uri?.path.isNullOrEmpty()) {
             try {
                 val getLinkResponse = linkRepository.fetchLinkData(
                     domain = subDomain,
@@ -442,8 +448,8 @@ class PolarGX(
                 val trackRequest = LinkTrackRequest(
                     clickTime = DateTimeUtils.calendarToString(
                         clickTime,
-                        PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
-                        PolarGXConstants.DateTime.utcTimeZone,
+                        PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
+                        PolarConstants.DateTime.utcTimeZone,
                     ),
                     domain = subDomain,
                     slug = path,
@@ -452,7 +458,7 @@ class PolarGX(
                     deviceData = mutableMapOf(),
                     additionalData = mutableMapOf(),
                 )
-                val clid = uri.getQueryParameter("__clid")
+                val clid = uri?.getQueryParameter("__clid")
                 if (clid.isNullOrEmpty()) {
                     val trackResponse = linkRepository.track(trackRequest)
                     val linkClickUnid = trackResponse.data?.linkClick?.unid
@@ -468,7 +474,7 @@ class PolarGX(
             }
             return
         }
-        if (isFirstTimeLaunch && uri.path.isNullOrEmpty()) {
+        if (isFirstTimeLaunch && uri?.path.isNullOrEmpty()) {
             val windowMetrics = WindowMetricsCalculator.getOrCreate()
                 .computeCurrentWindowMetrics(activity)
             val width = windowMetrics.bounds.width()
@@ -479,7 +485,7 @@ class PolarGX(
             val density = metrics?.density
             val densityDpi = metrics?.densityDpi
 
-            LALogger.d(
+            PolarLogger.d(
                 TAG, "initSession: " +
                         "\nIP4Address=${application.getIP4Address()}" +
                         "\nIP6Address=${application.getIP6Address()}" +

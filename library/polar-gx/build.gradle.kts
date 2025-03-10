@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.library.link_attribution"
+    namespace = "com.library.polar_gx"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
@@ -30,7 +30,6 @@ android {
 
     buildTypes {
         getByName("debug") {
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -38,8 +37,6 @@ android {
             )
         }
         release {
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
-//            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -99,7 +96,7 @@ afterEvaluate {
         publications {
             register<MavenPublication>("release") {
                 groupId = "com.github.infinitech-dev" // Replace with your GitHub username
-                artifactId = "linkAttribution" // Replace with your library's name (e.g., my-awesome-library)
+                artifactId = "polar-gx" // Replace with your library's name (e.g., my-awesome-library)
                 version = "1.0.6" // Initial version number (important!)
 
                 afterEvaluate {

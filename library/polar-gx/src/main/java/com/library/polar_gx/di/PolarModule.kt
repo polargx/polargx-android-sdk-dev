@@ -1,11 +1,11 @@
 package com.library.polar_gx.di
 
 import android.content.Context
-import com.library.link_attribution.BuildConfig
-import com.library.polar_gx.PolarGX
-import com.library.polar_gx.PolarGX.Companion.TAG
-import com.library.polar_gx.PolarGXConstants
-import com.library.polar_gx.logger.LALogger
+import com.library.polar_gx.Polar
+import com.library.polar_gx.Polar.Companion.TAG
+import com.library.polar_gx.PolarConstants
+import com.library.polar_gx.configuration.Configuration
+import com.library.polar_gx.logger.PolarLogger
 import com.library.polar_gx.model.ApiError
 import com.library.polar_gx.repository.event.EventRepository
 import com.library.polar_gx.repository.event.EventRepositoryImpl
@@ -47,20 +47,19 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-val linkAttributeModule = module {
-    // Repositories
+val polarModule = module {
     singleOf(::LinkLocalDatasourceImpl) { bind<LinkLocalDatasource>() }
     single {
         LinkRemoteDatasourceImpl(
-            client = get(named(PolarGXConstants.Koin.APP_HTTP_CLIENT)),
+            client = get(named(PolarConstants.Koin.APP_HTTP_CLIENT)),
         )
     } bind LinkRemoteDatasource::class
     singleOf(::LinkRepositoryImpl) bind LinkRepository::class
 
-    singleOf(::EventLocalDatasourceImpl) { bind<EventLocalDatasource>() }
+    singleOf(::EventLocalDatasourceImpl) bind EventLocalDatasource::class
     single {
         EventRemoteDatasourceImpl(
-            client = get(named(PolarGXConstants.Koin.APP_HTTP_CLIENT)),
+            client = get(named(PolarConstants.Koin.APP_HTTP_CLIENT)),
         )
     } bind EventRemoteDatasource::class
     singleOf(::EventRepositoryImpl) bind EventRepository::class
@@ -73,7 +72,7 @@ val linkAttributeModule = module {
         )
     }
 
-    single(named(PolarGXConstants.Koin.APP_HTTP_CLIENT)) {
+    single(named(PolarConstants.Koin.APP_HTTP_CLIENT)) {
         val client = HttpClient(Android) {
             engine {
                 socketTimeout = 60_000
@@ -81,13 +80,12 @@ val linkAttributeModule = module {
             }
             defaultRequest {
                 url {
-//                    protocol = URLProtocol.HTTP
                     protocol = URLProtocol.HTTPS
-                    host = BuildConfig.API_URL
+                    host = Configuration.Env.server
                 }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json)
-                    append("x-api-key", PolarGX.getConfigs()?.apiKey ?: "")
+                    append("x-api-key", Polar.getConfigs()?.apiKey ?: "")
                 }
             }
 
@@ -98,7 +96,7 @@ val linkAttributeModule = module {
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
-                        LALogger.i("HttpClient", message)
+                        PolarLogger.i("HttpClient", message)
                     }
                 }
                 level = LogLevel.ALL
@@ -119,14 +117,14 @@ val linkAttributeModule = module {
 
             HttpResponseValidator {
                 validateResponse { response ->
-                    LALogger.d(TAG, "validateResponse: response=$response")
+                    PolarLogger.d(TAG, "validateResponse: response=$response")
                     if (!response.status.isSuccess()) {
                         throw ClientRequestException(response, "")
                     }
                 }
 
                 handleResponseExceptionWithRequest { cause, request ->
-                    LALogger.d(
+                    PolarLogger.d(
                         TAG,
                         "handleResponseExceptionWithRequest: cause=$cause, request=$request"
                     )
@@ -134,7 +132,7 @@ val linkAttributeModule = module {
                         if (cause !is ClientRequestException) throw cause
                         val errorData = cause.response.bodyAsText()
                         val error = ApiError(errorData)
-                        LALogger.d(
+                        PolarLogger.d(
                             TAG,
                             "handleResponseExceptionWithRequest: error=${error}, errorData=${errorData}"
                         )
@@ -143,25 +141,13 @@ val linkAttributeModule = module {
                         }
                         throw ApiError(errorData)
                     } catch (ex: Throwable) {
-                        LALogger.d(TAG, "response: ex=${ex}")
+                        PolarLogger.d(TAG, "response: ex=${ex}")
                         throw ex
                     }
                 }
             }
 
         }
-
-//        client.plugin(HttpSend).intercept { request ->
-//            LALogger.d(TAG, "request=$request")
-//            if (request.url.encodedPath.endsWith("users/password/login", true)
-//                || request.url.encodedPath.endsWith("users/password/signup", true)
-//                || request.url.encodedPath.endsWith("users/anon/signup", true)
-//                || request.url.encodedPath.endsWith("users/password/forgot", true)
-//            ) {
-//                request.headers.remove("token")
-//            }
-//            execute(request)
-//        }
         client
     }
 }

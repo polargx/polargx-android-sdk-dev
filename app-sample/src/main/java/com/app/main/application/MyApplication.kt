@@ -4,17 +4,13 @@ import android.app.Application
 import android.content.Context
 import androidx.multidex.MultiDex
 import com.app.main.di.appModule
-import com.library.polar_gx.PolarGX
-import com.lyft.kronos.AndroidClockFactory
-import com.lyft.kronos.KronosClock
+import com.library.polar_gx.Polar
 import com.polargx.sample.BuildConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 
 class MyApplication : Application() {
-
-    private lateinit var mKronosClock: KronosClock
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -35,23 +31,17 @@ class MyApplication : Application() {
     }
 
     private fun initData() {
-        mKronosClock = AndroidClockFactory.createKronosClock(this)
-        mKronosClock.syncInBackground()
+        Polar.isDevelopmentEnabled = false
+        Polar.isLoggingEnabled = true
 
-        PolarGX.isDevelopmentEnabled = false //production
-        PolarGX.isLoggingEnabled = true
-        PolarGX.initApp(
+        Polar.initApp(
             application = this,
-            appId = BuildConfig.BRANCH_APP_ID,
-            apiKey = BuildConfig.BRANCH_API_KEY,
+            appId = BuildConfig.POLAR_APP_ID,
+            apiKey = BuildConfig.POLAR_API_KEY,
         )
     }
 
     private fun initListener() {
 
-    }
-
-    fun getInternetTimeInMillis(): Long {
-        return mKronosClock.getCurrentTimeMs()
     }
 }

@@ -43,27 +43,20 @@ android {
         create("dev") {
             dimension = "buildMode"
             applicationId = "com.polargx.sample.dev"
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
-            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
-//            buildConfigField("String", "API_KEY", "\"b12IopSmv5106rSjbL4kJ70rWlk0bsLa1K9CGQDF\"")
-            buildConfigField("String", "BRANCH_APP_ID", "\"d714f3d5-d2a8-4877-a6bf-890bfacfb0e7\"")
-            buildConfigField("String", "BRANCH_API_KEY", "\"gULjmKEvhP70fpiMq2bWYxM2r9dPGI58QkpQdLR4\"")
+            buildConfigField("String", "POLAR_APP_ID", "\"ad71f83f-4bc3-447a-94c8-d78c3ec8cce2\"")
+            buildConfigField("String", "POLAR_API_KEY", "\"IF7M2WBS034QFvycReBBPavHfo5xXOkLOaOJmP9i\"")
         }
         create("staging") {
             dimension = "buildMode"
             applicationId = "com.polargx.sample.staging"
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/staging\"")
-            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
-            buildConfigField("String", "BRANCH_APP_ID", "\"d714f3d5-d2a8-4877-a6bf-890bfacfb0e7\"")
-            buildConfigField("String", "BRANCH_API_KEY", "\"gULjmKEvhP70fpiMq2bWYxM2r9dPGI58QkpQdLR4\"")
+            buildConfigField("String", "POLAR_APP_ID", "\"ad71f83f-4bc3-447a-94c8-d78c3ec8cce2\"")
+            buildConfigField("String", "POLAR_API_KEY", "\"IF7M2WBS034QFvycReBBPavHfo5xXOkLOaOJmP9i\"")
         }
         create("prod") {
             dimension = "buildMode"
             applicationId = "com.polargx.sample.prod"
-            buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
-            buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
-            buildConfigField("String", "BRANCH_APP_ID", "\"f2ba2957-08fd-4feb-a360-92997be69a76\"")
-            buildConfigField("String", "BRANCH_API_KEY", "\"Okyd6QFgfs6enqPRqf7OM4HMRKYG3Hej90h6fnDC\"")
+            buildConfigField("String", "POLAR_APP_ID", "\"217ae0a5-fec5-40a5-947a-d0a8c6b27332\"")
+            buildConfigField("String", "POLAR_API_KEY", "\"b7jAcEsxOk948NaMiioN43R3au2U4RmZZpHQsfDc\"")
         }
     }
 
@@ -137,13 +130,6 @@ dependencies {
 
     // View
     implementation(libs.constraintlayout)
-
-    // Firebase
-//    implementation(platform(libs.firebase.bom))
-//    implementation(libs.firebase.analytics.ktx)
-//    implementation(libs.firebase.inappmessaging.display.ktx)
-//    implementation(libs.firebase.messaging.ktx)
-//    implementation(libs.firebase.crashlytics.ktx)
 
     // Ktor
     implementation(libs.ktor.client.core)

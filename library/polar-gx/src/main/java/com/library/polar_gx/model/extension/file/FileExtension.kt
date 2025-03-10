@@ -6,7 +6,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 import android.util.Log
-import com.library.polar_gx.logger.LALogger
+import com.library.polar_gx.logger.PolarLogger
 
 import java.io.*
 
@@ -44,14 +44,14 @@ fun File.copy(src: File?) {
 
 fun File.logFile() {
     if (this.isDirectory) {
-        LALogger.d("FILE_LOG", "logFile: dir = ${this.path}, size = ${this.listFiles()?.size}")
+        PolarLogger.d("FILE_LOG", "logFile: dir = ${this.path}, size = ${this.listFiles()?.size}")
         this.listFiles()?.let {
             for (i in it.indices) {
                 it[i].logFile()
             }
         }
     } else {
-        LALogger.d("FILE_LOG", "logFile: file = ${this.path}")
+        PolarLogger.d("FILE_LOG", "logFile: file = ${this.path}")
     }
 }
 

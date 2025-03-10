@@ -1,6 +1,6 @@
 package com.library.polar_gx.utils
 
-import com.library.polar_gx.PolarGXConstants
+import com.library.polar_gx.PolarConstants
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -23,7 +23,7 @@ object DateTimeUtils {
 
     fun stringToCalendar(
         source: String?,
-        format: String = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
+        format: String = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
     ): Calendar? {
@@ -35,7 +35,7 @@ object DateTimeUtils {
 
     fun calendarToString(
         source: Calendar?,
-        format: String = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
+        format: String = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
     ): String? {
@@ -44,7 +44,7 @@ object DateTimeUtils {
 
     fun stringToDate(
         source: String?,
-        format: String = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
+        format: String = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
     ): Date? {
@@ -60,7 +60,7 @@ object DateTimeUtils {
 
     fun dateToString(
         source: Date?,
-        format: String = PolarGXConstants.DateTime.DEFAULT_DATE_FORMAT,
+        format: String = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
     ): String? {
