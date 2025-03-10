@@ -4,7 +4,7 @@
 
     <application>
         <activity
-            android:name="com.app.main.splash.SplashActivity"
+            android:name="com.app.main.main.SplashActivity"
             android:configChanges="layoutDirection|locale"
             android:exported="true"
             android:launchMode="singleTask"

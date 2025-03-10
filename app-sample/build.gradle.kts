@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.linkattribution.sample"
+    namespace = "com.polargx.sample"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.linkattribution.sample"
+        applicationId = "com.polargx.sample"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = libs.versions.versionCode.get().toInt()
@@ -42,7 +42,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "buildMode"
-            applicationId = "com.linkattribution.sample.dev"
+            applicationId = "com.polargx.sample.dev"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/dev\"")
             buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
 //            buildConfigField("String", "API_KEY", "\"b12IopSmv5106rSjbL4kJ70rWlk0bsLa1K9CGQDF\"")
@@ -51,7 +51,7 @@ android {
         }
         create("staging") {
             dimension = "buildMode"
-            applicationId = "com.linkattribution.sample.staging"
+            applicationId = "com.polargx.sample.staging"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/staging\"")
             buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
             buildConfigField("String", "BRANCH_APP_ID", "\"d714f3d5-d2a8-4877-a6bf-890bfacfb0e7\"")
@@ -59,7 +59,7 @@ android {
         }
         create("prod") {
             dimension = "buildMode"
-            applicationId = "com.linkattribution.sample.prod"
+            applicationId = "com.polargx.sample.prod"
             buildConfigField("String", "API_URL", "\"jw4xix6q44.execute-api.us-east-1.amazonaws.com/prod\"")
             buildConfigField("String", "X_API_KEY", "\"Xam6SYJX9F8Bmqai6WwaP2Q4GpVTyw4d1y3uxeGe\"")
             buildConfigField("String", "BRANCH_APP_ID", "\"f2ba2957-08fd-4feb-a360-92997be69a76\"")
@@ -167,18 +167,5 @@ dependencies {
     // Internet time
     implementation(libs.kronos.java)
     implementation(libs.kronos.android)
-
-    implementation(project(":app-shared"))
-    implementation(project(":library:core"))
-    implementation(project(":library:network"))
-    implementation(project(":library:link-attribution"))
-    implementation(project(":data:users"))
-    implementation(project(":data:shared"))
-    implementation(project(":data:products"))
-//    implementation(project(":feature:shared"))
-//    implementation(project(":feature:auth"))
-//    implementation(project(":feature:onboarding"))
-//    implementation(project(":feature:main"))
-//    implementation(project(":feature:settings"))
-
+    implementation(project(":library:polar-gx"))
 }

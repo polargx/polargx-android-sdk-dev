@@ -19,18 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LinkAttribution-AndroidSDK"
+rootProject.name = "PolarGX SDK"
 include(":app-sample")
-include(":app-shared")
-include(":library:core")
-include(":library:network")
-include(":data:users")
-include(":data:products")
-//include(":feature:shared")
-//include(":feature:auth")
-//include(":feature:onboarding")
-//include(":feature:main")
-//include(":feature:settings")
-include(":data:shared")
-include(":data:authentication")
-include(":library:link-attribution")
+include(":library:polar-gx")

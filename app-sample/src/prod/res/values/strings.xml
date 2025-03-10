@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Link Attribution</string>
+    <string name="app_name">PolarGX</string>
     <string name="content_authority">com.nhn.base.provider</string>
     <string name="account_type">com.nhn.base.account</string>
 </resources>

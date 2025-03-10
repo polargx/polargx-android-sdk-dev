@@ -4,12 +4,12 @@
 
     <application>
         <activity
-            android:name="com.app.main.splash.SplashActivity"
+            android:name="com.app.main.MainActivity"
             android:configChanges="layoutDirection|locale"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/SplashScreenTheme">
+            android:theme="@style/Theme.AndroidBase01">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

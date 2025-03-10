@@ -11,16 +11,8 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app-sample" />
-            <option value="$PROJECT_DIR$/app-shared" />
-            <option value="$PROJECT_DIR$/data" />
-            <option value="$PROJECT_DIR$/data/authentication" />
-            <option value="$PROJECT_DIR$/data/products" />
-            <option value="$PROJECT_DIR$/data/shared" />
-            <option value="$PROJECT_DIR$/data/users" />
             <option value="$PROJECT_DIR$/library" />
-            <option value="$PROJECT_DIR$/library/core" />
-            <option value="$PROJECT_DIR$/library/link-attribution" />
-            <option value="$PROJECT_DIR$/library/network" />
+            <option value="$PROJECT_DIR$/library/polar-gx" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="false" />

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <dimen name="commonIconSize">48dp</dimen>
-    <dimen name="buttonPrimaryHeight">86dp</dimen>
-
-</resources>
