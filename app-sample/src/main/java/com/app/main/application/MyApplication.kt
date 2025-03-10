@@ -38,6 +38,7 @@ class MyApplication : Application() {
         mKronosClock = AndroidClockFactory.createKronosClock(this)
         mKronosClock.syncInBackground()
 
+        PolarGX.isDevelopmentEnabled = false //production
         PolarGX.isLoggingEnabled = true
         PolarGX.initApp(
             application = this,

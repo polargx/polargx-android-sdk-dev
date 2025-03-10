@@ -70,7 +70,9 @@ class PolarGX(
         @SuppressLint("StaticFieldLeak")
         private var instance: PolarGX? = null
         private var mConfigs: ConfigsModel? = null
-        var isLoggingEnabled = true
+
+        var isDevelopmentEnabled = false
+        var isLoggingEnabled = false
 
         private var mInitAppJob: Job? = null
         private var mGetLinkJob: Job? = null
