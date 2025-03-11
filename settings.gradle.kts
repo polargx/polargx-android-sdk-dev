@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PolarGX"
 include(":app-sample")
-include(":library:polar-gx")
+include(":polargx")

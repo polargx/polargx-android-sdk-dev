@@ -23,28 +23,6 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-<!--            <intent-filter android:autoVerify="true">-->
-<!--                <action android:name="android.intent.action.VIEW" />-->
-
-<!--                <category android:name="android.intent.category.DEFAULT" />-->
-<!--                <category android:name="android.intent.category.BROWSABLE" />-->
-
-<!--                &lt;!&ndash; custom scheme &ndash;&gt;-->
-<!--                &lt;!&ndash; dev &ndash;&gt;-->
-<!--                <data android:scheme="vintagewalklongevity.testing" />-->
-<!--                &lt;!&ndash; production &ndash;&gt;-->
-<!--                <data android:scheme="vintagewalklongevity.production" />-->
-
-<!--                &lt;!&ndash; universal &ndash;&gt;-->
-<!--                <data android:scheme="https" />-->
-<!--                <data android:host="walklongevitydev.makelabs.ai" />-->
-<!--                <data android:host="walklongevitydev-alternate.makelabs.ai" />-->
-
-<!--                <data android:scheme="https" />-->
-<!--                <data android:host="walklongevity.makelabs.ai" />-->
-<!--                <data android:host="walklongevity-alternate.makelabs.ai" />-->
-<!--            </intent-filter>-->
         </activity>
     </application>
 

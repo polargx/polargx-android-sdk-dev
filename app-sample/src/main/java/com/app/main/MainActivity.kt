@@ -3,8 +3,8 @@ package com.app.main
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.library.polar_gx.Polar
-import com.library.polar_gx.listener.LinkInitListener
+import com.library.polargx.Polar
+import com.library.polargx.listener.LinkInitListener
 import com.polargx.sample.R
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
