@@ -21,8 +21,6 @@ class ProdEnvConfiguration(
 ) : EnvConfiguration(name, server, supportedBaseDomains)
 
 object Configuration {
-    val Brand: String = "Polar"
-
     val Env: EnvConfiguration = if (Polar.isDevelopmentEnabled) {
         DevEnvConfiguration()
     } else {

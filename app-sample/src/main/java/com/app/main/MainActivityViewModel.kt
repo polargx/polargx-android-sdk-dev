@@ -7,25 +7,19 @@ import androidx.lifecycle.ViewModel
 class MainActivityViewModel : ViewModel() {
 
     companion object {
-        const val TAG = ">>>SplashActivityViewModel"
+        const val TAG = ">>>MainActivityViewModel"
     }
 
     fun loadInitData(intent: Intent?) {
 
     }
 
-    fun onStartPolarGXInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
-        Log.d(
-            TAG,
-            "onStartPolarGXInitFinished: attributes=$attributes, error=$error"
-        )
+    fun onStartPolarInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
+        Log.d(TAG, "onStartPolarInitFinished: attributes=$attributes, error=$error")
     }
 
-    fun onNewIntentAttributionInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
-        Log.d(
-            TAG,
-            "onNewIntentAttributionInitFinished: attributes=$attributes, error=$error"
-        )
+    fun onNewIntentPolarInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
+        Log.d(TAG, "onNewIntentPolarInitFinished: attributes=$attributes, error=$error")
     }
 
     interface LiveEvent

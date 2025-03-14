@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.library.polargx.Polar
-import com.library.polargx.listener.LinkInitListener
 import com.polargx.sample.R
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -24,25 +23,22 @@ class MainActivity : AppCompatActivity(R.layout.activity_main),
 
     override fun onStart() {
         super.onStart()
-        Polar.init(
+        Polar.bind(
             activity = this,
             uri = intent?.data,
-            listener = object : LinkInitListener {
-                override fun onInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
-                    mViewModel.onStartPolarGXInitFinished(attributes, error)
-                }
-            })
+            listener = { attributes, error ->
+                mViewModel.onStartPolarInitFinished(attributes, error)
+            }
+        )
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Polar.reInit(
+        Polar.reBind(
             activity = this,
             uri = intent.data,
-            listener = object : LinkInitListener {
-                override fun onInitFinished(attributes: Map<String, String?>?, error: Throwable?) {
-                    mViewModel.onNewIntentAttributionInitFinished(attributes, error)
-                }
+            listener = { attributes, error ->
+                mViewModel.onNewIntentPolarInitFinished(attributes, error)
             }
         )
     }
