@@ -15,7 +15,7 @@ import com.library.polargx.extension.getManufacturer
 import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.lifecycle.AppLifecycleMonitor
-import com.library.polargx.listener.LinkInitListener
+import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.logger.PolarLogger
 import com.library.polargx.model.configs.ConfigsModel
 import com.library.polargx.repository.event.EventRepository
@@ -81,7 +81,7 @@ class Polar(
 
         @SuppressLint("StaticFieldLeak")
         private var mLastActivity: Activity? = null
-        private var mLastListener: LinkInitListener? = null
+        private var mLastListener: PolarInitListener? = null
         private var isReInitializing: Boolean? = null
 
         fun getConfigs(): ConfigsModel? {
@@ -97,7 +97,6 @@ class Polar(
             appId: String?,
             apiKey: String?,
         ) {
-            PolarLogger.d(TAG, "initApp: appId=$appId, apiKey=$apiKey")
             if (mInitAppJob?.isActive == true) {
                 mInitAppJob?.cancel()
                 mInitAppJob = null
@@ -116,7 +115,7 @@ class Polar(
                 }
                 instance?.startInitializingApp()
                 if (mLastUri != null) {
-                    instance?.init(mLastActivity, mLastUri)
+                    instance?.init()
                 } else {
                     mLastListener?.onInitFinished(null, null)
                 }
@@ -124,10 +123,10 @@ class Polar(
             }
         }
 
-        fun init(
+        fun bind(
             activity: Activity?,
             uri: Uri?,
-            listener: LinkInitListener
+            listener: PolarInitListener
         ) {
             PolarLogger.d(TAG, "init: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
@@ -139,14 +138,14 @@ class Polar(
                 mLastActivity = activity
                 mLastListener = listener
                 if (isAppInitializing()) return@launch
-                instance?.init(activity = activity, uri = uri)
+                instance?.init()
             }
         }
 
-        fun reInit(
+        fun reBind(
             activity: Activity?,
             uri: Uri?,
-            listener: LinkInitListener
+            listener: PolarInitListener
         ) {
             PolarLogger.d(TAG, "reInit: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
@@ -158,7 +157,7 @@ class Polar(
                 mLastActivity = activity
                 mLastListener = listener
                 if (isAppInitializing()) return@launch
-                instance?.reInit(activity = activity, uri = uri)
+                instance?.reInit()
             }
         }
     }
@@ -409,25 +408,23 @@ class Polar(
         }
     }
 
-    suspend fun init(activity: Activity?, uri: Uri?) {
-        handleFetchLinkData(activity = activity, uri = mLastUri)
+    suspend fun init() {
+        handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
     }
 
-    suspend fun reInit(activity: Activity?, uri: Uri?) {
-        handleFetchLinkData(activity = activity, uri = mLastUri)
+    suspend fun reInit() {
+        handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
     }
 
     private suspend fun handleFetchLinkData(activity: Activity?, uri: Uri?) {
         if (activity == null) return
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains
         val domain = uri?.host ?: ""
-//        if (domain?.endsWith(PolarConstants.Configuration.DOMAIN_SUFFIX) != true) {
         if (!domain.endsWith(supportedBaseDomains)) {
             PolarLogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
             mLastListener?.onInitFinished(null, null)
             return
         }
-//        val subDomain = domain.replace(PolarConstants.Configuration.DOMAIN_SUFFIX, "")
         val subDomain = domain.replace(supportedBaseDomains, "")
         val path = uri?.path?.replace("/", "")
         val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(

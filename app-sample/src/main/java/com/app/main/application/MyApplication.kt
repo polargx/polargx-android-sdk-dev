@@ -2,9 +2,11 @@ package com.app.main.application
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.multidex.MultiDex
 import com.app.main.di.appModule
 import com.library.polargx.Polar
+import com.library.polargx.configuration.Configuration
 import com.polargx.sample.BuildConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
