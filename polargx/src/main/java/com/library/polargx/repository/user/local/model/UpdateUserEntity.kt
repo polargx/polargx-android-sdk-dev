@@ -1,33 +1,33 @@
-package com.library.polargx.repository.event.local.model
+package com.library.polargx.repository.user.local.model
 
-import com.library.polargx.repository.event.model.EventModel
+import com.library.polargx.repository.user.model.UpdateUserModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class EventEntity(
+data class UpdateUserEntity(
     @SerialName("organizationUnid")
     val organizationUnid: String? = null,
-    @SerialName("eventName")
-    val eventName: String? = null,
+    @SerialName("userID")
+    val userID: String? = null,
     @SerialName("data")
     val data: Map<String, String>? = null
 ) {
 
-    fun toExternal(): EventModel {
-        return EventModel(
+    fun toExternal(): UpdateUserModel {
+        return UpdateUserModel(
             organizationUnid = organizationUnid,
-            eventName = eventName,
+            userID = userID,
             data = data
         )
     }
 
     companion object {
-        fun EventModel?.toEntity(): EventEntity? {
+        fun UpdateUserModel?.toEntity(): UpdateUserEntity? {
             if (this == null) return null
-            return EventEntity(
+            return UpdateUserEntity(
                 organizationUnid = organizationUnid,
-                eventName = eventName,
+                userID = userID,
                 data = data
             )
         }

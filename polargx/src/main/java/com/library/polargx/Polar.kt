@@ -16,7 +16,7 @@ import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.lifecycle.AppLifecycleMonitor
 import com.library.polargx.listener.PolarInitListener
-import com.library.polargx.logger.PolarLogger
+import com.library.polargx.logger.Logger
 import com.library.polargx.model.configs.ConfigsModel
 import com.library.polargx.repository.event.EventRepository
 import com.library.polargx.repository.event.model.EventModel
@@ -44,12 +44,17 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import java.net.ConnectException
+import java.net.URL
 import java.net.UnknownHostException
 import java.util.Calendar
+import java.util.Date
+import java.util.UUID
+
+typealias OnLinkClickHandler = (link: URL, data: Map<String, Any>?, error: Throwable?) -> Unit
 
 class Polar(
     private val application: Application,
-    private val appId: String?,
+    private val appId: String,
 ) : KoinComponent {
 
     private val eventRepository: EventRepository by inject()
@@ -63,6 +68,12 @@ class Polar(
 
     private var mLastLink: LinkDataModel? = null
 
+//    val appDirectory by lazy {
+//        FileStorageURL.sdkDirectory.resolve(appId)
+//    }
+
+    private var currentUserSession: UserSession? = null
+    private var otherUserSessions = mutableListOf<UserSession>()
 
     companion object {
         const val TAG = ">>>Polar"
@@ -94,8 +105,9 @@ class Polar(
 
         fun initialize(
             application: Application,
-            appId: String?,
-            apiKey: String?,
+            appId: String,
+            apiKey: String,
+            onLinkClickHandler: OnLinkClickHandler
         ) {
             if (mInitAppJob?.isActive == true) {
                 mInitAppJob?.cancel()
@@ -128,7 +140,7 @@ class Polar(
             uri: Uri?,
             listener: PolarInitListener
         ) {
-            PolarLogger.d(TAG, "init: uri=$uri")
+            Logger.d(TAG, "init: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
                 mGetLinkJob?.cancel()
             }
@@ -147,7 +159,7 @@ class Polar(
             uri: Uri?,
             listener: PolarInitListener
         ) {
-            PolarLogger.d(TAG, "reInit: uri=$uri")
+            Logger.d(TAG, "reInit: uri=$uri")
             if (mGetLinkJob?.isActive == true) {
                 mGetLinkJob?.cancel()
             }
@@ -199,7 +211,7 @@ class Polar(
                 val request = EventTrackRequest.from(launchEvent)
                 val response = eventRepository.rawTrack(request)
                 if (response.status.isSuccess()) {
-                    PolarLogger.d(
+                    Logger.d(
                         TAG,
                         "startInitializingApp: successful ✅ with ${Configuration.Env.name} environment"
                     )
@@ -207,14 +219,14 @@ class Polar(
                     shouldRetry = false
                 }
                 if (response.status.value == 403) {
-                    PolarLogger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
+                    Logger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
                     shouldRetry = false
                 }
             } catch (throwable: Throwable) {
                 when (throwable) {
                     is ConnectException -> {
                         // Handle connection refused or other connection issues (no internet)
-                        PolarLogger.d(
+                        Logger.d(
                             TAG,
                             "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
                         )
@@ -224,7 +236,7 @@ class Polar(
 
                     is UnknownHostException -> {
                         // Handle DNS resolution failures (no internet or incorrect URL)
-                        PolarLogger.d(
+                        Logger.d(
                             TAG,
                             "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
                         )
@@ -234,7 +246,7 @@ class Polar(
 
                     else -> {
                         // Handle other exceptions (e.g., server errors, JSON parsing)
-                        PolarLogger.d(
+                        Logger.d(
                             TAG,
                             "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
                         )
@@ -245,24 +257,59 @@ class Polar(
         } while (shouldRetry)
     }
 
+    /// Set userID and attributes:
+    /// - Create current user session if needed
+    /// - Backup user session into the otherUserSessions to keep running for sending events
+    private fun setUser(userID: String?, attributes: Map<String, String>?) {
+        CoroutineScope(Dispatchers.Main).launch {
+            currentUserSession?.let { userSession ->
+                if (userSession.userID != userID) {
+                    currentUserSession = null
+                    otherUserSessions.add(userSession)
+                }
+            }
+
+            if (currentUserSession == null && userID != null) {
+//                val fileUrl = appDirectory.file("events_${System.currentTimeMillis()}_${UUID.randomUUID()}.json")
+//                Logger.d(TAG, "TrackingEvents stored in `$fileUrl`")
+
+//                currentUserSession = UserSession(
+//                    organizationUnid = appId,
+//                    userID = userID,
+//                    trackingStorageURL = fileUrl
+//                )
+            }
+
+            currentUserSession?.setAttributes(attributes ?: emptyMap())
+        }
+    }
+
+
+    private fun trackEvent(name: String, date: String, attributes: Map<String, String>) {
+        CoroutineScope(Dispatchers.Main).launch {
+            currentUserSession?.trackEvent(name, date, attributes)
+        }
+    }
+
+
     private fun initListener() {
         CoroutineScope(Dispatchers.Main).launch {
             application.registerActivityLifecycleCallbacks(
                 AppLifecycleMonitor(object : AppLifecycleMonitor.Listener {
 
                     override fun onAppForegrounded() {
-                        PolarLogger.d(TAG, "onAppForegrounded:")
+                        Logger.d(TAG, "onAppForegrounded:")
                         instance?.trackEvent(
                             type = EventModel.Type.APP_OPEN,
-                            data = mutableMapOf()
+                            data = mapOf()
                         )
                     }
 
                     override fun onAppBackgrounded() {
-                        PolarLogger.d(TAG, "onAppBackgrounded:")
+                        Logger.d(TAG, "onAppBackgrounded:")
                         instance?.trackEvent(
                             type = EventModel.Type.APP_CLOSE,
-                            data = mutableMapOf()
+                            data = mapOf()
                         )
                     }
 
@@ -315,7 +362,7 @@ class Polar(
 
     fun trackEvent(
         @EventModel.Type type: String?,
-        data: Map<String, String?>?
+        data: Map<String, String>?
     ) {
         trackEvent(
             type = type,
@@ -329,7 +376,7 @@ class Polar(
     fun trackEvent(
         @EventModel.Type type: String?,
         time: Calendar,
-        data: Map<String, String?>?
+        data: Map<String, String>?
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             val event = EventModel(
@@ -364,7 +411,7 @@ class Polar(
                             val request = EventTrackRequest.from(event)
                             val response = eventRepository.rawTrack(request)
                             if (response.status.isSuccess()) {
-                                PolarLogger.d(
+                                Logger.d(
                                     TAG,
                                     "startTrackingQueueIfNeeded: successful ✅, event=$event"
                                 )
@@ -379,7 +426,7 @@ class Polar(
                                 eventRepository.setCacheEventList(latestEventList)
                             }
                         } catch (throwable: Throwable) {
-                            PolarLogger.d(
+                            Logger.d(
                                 TAG,
                                 "startTrackingQueueIfNeeded: ⛔error: ex=$throwable, event=$event"
                             )
@@ -421,7 +468,7 @@ class Polar(
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains
         val domain = uri?.host ?: ""
         if (!domain.endsWith(supportedBaseDomains)) {
-            PolarLogger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+            Logger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
             mLastListener?.onInitFinished(null, null)
             return
         }
@@ -482,7 +529,7 @@ class Polar(
             val density = metrics?.density
             val densityDpi = metrics?.densityDpi
 
-            PolarLogger.d(
+            Logger.d(
                 TAG, "initSession: " +
                         "\nIP4Address=${application.getIP4Address()}" +
                         "\nIP6Address=${application.getIP6Address()}" +

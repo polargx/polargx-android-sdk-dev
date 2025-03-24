@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 data class EventTrackRequest(
     @SerialName("organizationUnid")
     val organizationUnid: String? = null,
+    @SerialName("userID")
+    val userID: String? = null,
     @SerialName("eventName")
     val eventName: String? = null,
     @SerialName("eventTime")
@@ -15,12 +17,13 @@ data class EventTrackRequest(
     @SerialName("data")
     val data: Map<String, String?>? = null
 ) {
-
+    
     companion object {
         fun from(event: EventModel?): EventTrackRequest? {
             if (event == null) return null
             return EventTrackRequest(
                 organizationUnid = event.organizationUnid,
+                userID = event.userID,
                 eventName = event.eventName,
                 eventTime = event.eventTime,
                 data = event.data

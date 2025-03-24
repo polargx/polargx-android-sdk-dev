@@ -3,7 +3,7 @@ package com.library.polargx.logger
 import android.util.Log
 import com.library.polargx.Polar
 
-object PolarLogger {
+object Logger {
     fun d(tag: String?, message: String?) {
         if (Polar.isLoggingEnabled) {
             Log.d(tag, message ?: "")

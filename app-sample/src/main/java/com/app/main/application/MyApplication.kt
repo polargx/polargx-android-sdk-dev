@@ -6,13 +6,16 @@ import android.util.Log
 import androidx.multidex.MultiDex
 import com.app.main.di.appModule
 import com.library.polargx.Polar
-import com.library.polargx.configuration.Configuration
 import com.polargx.sample.BuildConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 
 class MyApplication : Application() {
+
+    companion object {
+        const val TAG = "Application"
+    }
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -40,6 +43,9 @@ class MyApplication : Application() {
             application = this,
             appId = BuildConfig.POLAR_APP_ID,
             apiKey = BuildConfig.POLAR_API_KEY,
+            onLinkClickHandler = { link, data, error ->
+                Log.d(TAG, "\n[DEMO] detect clicked: $link, data: $data, error: $error\n")
+            },
         )
     }
 

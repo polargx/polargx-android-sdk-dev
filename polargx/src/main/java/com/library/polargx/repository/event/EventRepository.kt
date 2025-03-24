@@ -14,7 +14,7 @@ interface EventRepository {
     suspend fun setCacheEventList(events: List<EventModel>?)
     suspend fun getCacheEventList(): List<EventModel>?
     suspend fun rawTrack(request: EventTrackRequest?): HttpResponse
-    suspend fun track(request: EventTrackRequest?): EventTrackResponse
+    suspend fun trackEvent(request: EventTrackRequest?): EventTrackResponse
     suspend fun reset()
 
     suspend fun isFirstTimeLaunch(

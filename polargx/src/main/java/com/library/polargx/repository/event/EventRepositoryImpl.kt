@@ -57,7 +57,7 @@ class EventRepositoryImpl(
         return remoteDatasource.track(request = request)
     }
 
-    override suspend fun track(request: EventTrackRequest?): EventTrackResponse {
+    override suspend fun trackEvent(request: EventTrackRequest?): EventTrackResponse {
         val response = remoteDatasource.track(
             request = request,
         )

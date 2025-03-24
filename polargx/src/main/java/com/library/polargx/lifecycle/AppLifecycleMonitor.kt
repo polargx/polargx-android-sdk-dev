@@ -7,7 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.library.polargx.logger.PolarLogger
+import com.library.polargx.logger.Logger
 
 class AppLifecycleMonitor(
     private val listener: Listener?
@@ -38,7 +38,7 @@ class AppLifecycleMonitor(
 
             @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
             fun onAppDestroyed() {
-                PolarLogger.d(TAG, "App is terminating")
+                Logger.d(TAG, "App is terminating")
             }
 
         })

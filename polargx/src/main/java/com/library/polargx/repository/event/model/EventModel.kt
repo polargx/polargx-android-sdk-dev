@@ -11,12 +11,14 @@ import kotlinx.serialization.Serializable
 data class EventModel(
     @SerialName("organizationUnid")
     val organizationUnid: String? = null,
+    @SerialName("userID")
+    val userID: String? = null,
     @SerialName("eventName")
     val eventName: String? = null,
     @SerialName("eventTime")
-    val eventTime: String? = null,//2025-02-18T07:26:26.735Z
+    val eventTime: String? = null,
     @SerialName("data")
-    val data: Map<String, String?>? = null
+    val data: Map<String, String>? = null
 ) : Parcelable {
 
     @Retention(value = AnnotationRetention.SOURCE)

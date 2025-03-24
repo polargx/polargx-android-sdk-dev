@@ -1,7 +1,7 @@
 package com.library.polargx.model
 
 import android.os.Parcelable
-import com.library.polargx.logger.PolarLogger
+import com.library.polargx.logger.Logger
 import com.library.polargx.model.extension.json.getEvenNonExisted
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
@@ -29,7 +29,7 @@ data class ApiError(
             message = jsonObj.getEvenNonExisted("message") as? String?
             apiVersion = jsonObj.getEvenNonExisted("api_version") as? Double?
         } catch (ex: Throwable) {
-            PolarLogger.d("ApiError", "ex=$ex")
+            Logger.d("ApiError", "ex=$ex")
         }
     }
 }
