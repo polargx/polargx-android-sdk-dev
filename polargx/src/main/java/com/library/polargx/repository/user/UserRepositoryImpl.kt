@@ -4,6 +4,7 @@ import com.library.polargx.model.ApiError
 import com.library.polargx.repository.user.local.UserLocalDatasource
 import com.library.polargx.repository.user.remote.UserRemoteDatasource
 import com.library.polargx.repository.user.remote.api.UpdateUserRequest
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 
@@ -16,9 +17,11 @@ class UserRepositoryImpl(
         const val TAG = ">>>UserRepositoryImpl"
     }
 
-    override suspend fun updateUser(request: UpdateUserRequest?) {
+    override suspend fun updateUser(request: UpdateUserRequest?): HttpResponse {
         val response = remoteDatasource.updateUser(request)
-        if (!response.status.isSuccess()) {
+        return if (response.status.isSuccess()) {
+            response
+        } else {
             throw ApiError(response.bodyAsText())
         }
     }

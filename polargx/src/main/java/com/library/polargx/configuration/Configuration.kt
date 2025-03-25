@@ -21,6 +21,8 @@ class ProdEnvConfiguration(
 ) : EnvConfiguration(name, server, supportedBaseDomains)
 
 object Configuration {
+    const val Brand = "Polar"
+
     val Env: EnvConfiguration = if (Polar.isDevelopmentEnabled) {
         DevEnvConfiguration()
     } else {

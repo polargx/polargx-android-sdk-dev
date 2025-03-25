@@ -134,10 +134,10 @@ val polarModule = module {
                             TAG,
                             "handleResponseExceptionWithRequest: error=${error}, errorData=${errorData}"
                         )
-                        when (error.code) {
-
-                        }
-                        throw ApiError(errorData)
+//                        when (error.code) {
+//
+//                        }
+//                        throw ApiError(errorData)
                     } catch (ex: Throwable) {
                         Logger.d(TAG, "response: ex=${ex}")
                         throw ex

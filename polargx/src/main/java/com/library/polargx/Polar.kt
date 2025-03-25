@@ -3,7 +3,10 @@ package com.library.polargx
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
+import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
+import android.os.Bundle
+import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.polargx.configuration.Configuration
 import com.library.polargx.di.polarModule
@@ -14,7 +17,7 @@ import com.library.polargx.extension.getIP6Address
 import com.library.polargx.extension.getManufacturer
 import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
-import com.library.polargx.lifecycle.AppLifecycleMonitor
+import com.library.polargx.helpers.FileStorage
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.logger.Logger
 import com.library.polargx.model.configs.ConfigsModel
@@ -46,8 +49,8 @@ import org.koin.core.context.startKoin
 import java.net.ConnectException
 import java.net.URL
 import java.net.UnknownHostException
+import java.time.Instant
 import java.util.Calendar
-import java.util.Date
 import java.util.UUID
 
 typealias OnLinkClickHandler = (link: URL, data: Map<String, Any>?, error: Throwable?) -> Unit
@@ -68,9 +71,12 @@ class Polar(
 
     private var mLastLink: LinkDataModel? = null
 
-//    val appDirectory by lazy {
-//        FileStorageURL.sdkDirectory.resolve(appId)
-//    }
+    /**
+     * The storage location to save user data and events (belong to SDK).
+     */
+    private val appDirectory by lazy {
+        FileStorage.getSDKDirectory(application).appendingSubDirectory(appId)
+    }
 
     private var currentUserSession: UserSession? = null
     private var otherUserSessions = mutableListOf<UserSession>()
@@ -107,7 +113,8 @@ class Polar(
             application: Application,
             appId: String,
             apiKey: String,
-            onLinkClickHandler: OnLinkClickHandler
+            onLinkClickHandler: OnLinkClickHandler,
+            onInitFinished: () -> Unit
         ) {
             if (mInitAppJob?.isActive == true) {
                 mInitAppJob?.cancel()
@@ -124,6 +131,7 @@ class Polar(
                         mKronosClock = AndroidClockFactory.createKronosClock(application)
                         mKronosClock.sync()
                     }
+                    onInitFinished()
                 }
                 instance?.startInitializingApp()
                 if (mLastUri != null) {
@@ -172,6 +180,14 @@ class Polar(
                 instance?.reInit()
             }
         }
+
+        fun updateUser(userID: String?, attributes: Map<String, String>?) {
+            instance?.setUser(userID, attributes)
+        }
+
+        fun trackEvent(name: String, attributes: Map<String, String>?) {
+            instance?.trackEvent(name, attributes)
+        }
     }
 
     private fun isKoinStarted(): Boolean {
@@ -191,6 +207,11 @@ class Polar(
     }
 
     suspend fun startInitializingApp() {
+        val pendingEventFiles = FileStorage
+            .listFiles(appDirectory)
+            .filter { it.startsWith("events_") }
+        startResolvingPendingEvents(pendingEventFiles)
+
         reset()
         var shouldRetry = true
         do {
@@ -257,9 +278,11 @@ class Polar(
         } while (shouldRetry)
     }
 
-    /// Set userID and attributes:
-    /// - Create current user session if needed
-    /// - Backup user session into the otherUserSessions to keep running for sending events
+    /**
+     * Set userID and attributes:
+     * - Create current user session if needed
+     * - Backup user session into the otherUserSessions to keep running for sending events
+     */
     private fun setUser(userID: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
             currentUserSession?.let { userSession ->
@@ -270,88 +293,101 @@ class Polar(
             }
 
             if (currentUserSession == null && userID != null) {
-//                val fileUrl = appDirectory.file("events_${System.currentTimeMillis()}_${UUID.randomUUID()}.json")
-//                Logger.d(TAG, "TrackingEvents stored in `$fileUrl`")
+                val name = "events_${Instant.now().epochSecond}_${UUID.randomUUID()}.json"
+                val file = appDirectory.file(name)
+                Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
 
-//                currentUserSession = UserSession(
-//                    organizationUnid = appId,
-//                    userID = userID,
-//                    trackingStorageURL = fileUrl
-//                )
+                currentUserSession = UserSession(
+                    organizationUnid = appId,
+                    userID = userID,
+                    trackingFileStorage = file
+                )
             }
 
             currentUserSession?.setAttributes(attributes ?: emptyMap())
         }
     }
 
-
-    private fun trackEvent(name: String, date: String, attributes: Map<String, String>) {
+    private fun trackEvent(name: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
+            val date = DateTimeUtils.calendarToString(
+                source = Calendar.getInstance().apply {
+                    timeInMillis = mKronosClock.getCurrentTimeMs()
+                },
+                format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
+                timeZone = PolarConstants.DateTime.utcTimeZone,
+            )
             currentUserSession?.trackEvent(name, date, attributes)
         }
     }
 
+    private fun startResolvingPendingEvents(pendingEventFiles: List<String>) {
+        CoroutineScope(Dispatchers.IO).launch {
+            pendingEventFiles.forEach { pendingEventFile ->
+                val file = appDirectory.file(pendingEventFile)
+                val eventQueue = TrackingEventQueue(file)
+
+                if (eventQueue.events.isEmpty()) {
+                    FileStorage.remove(pendingEventFile, appDirectory)
+                    return@forEach
+                }
+
+                eventQueue.setReady()
+                eventQueue.sendEventsIfNeeded()
+
+                if (eventQueue.events.isEmpty()) {
+                    FileStorage.remove(pendingEventFile, appDirectory)
+                }
+            }
+        }
+    }
 
     private fun initListener() {
         CoroutineScope(Dispatchers.Main).launch {
-            application.registerActivityLifecycleCallbacks(
-                AppLifecycleMonitor(object : AppLifecycleMonitor.Listener {
+            application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
 
-                    override fun onAppForegrounded() {
-                        Logger.d(TAG, "onAppForegrounded:")
-                        instance?.trackEvent(
-                            type = EventModel.Type.APP_OPEN,
-                            data = mapOf()
-                        )
-                    }
+                }
 
-                    override fun onAppBackgrounded() {
-                        Logger.d(TAG, "onAppBackgrounded:")
-                        instance?.trackEvent(
-                            type = EventModel.Type.APP_CLOSE,
-                            data = mapOf()
-                        )
-                    }
+                override fun onActivityStarted(activity: Activity) {
+                    instance?.trackEvent(
+                        name = EventModel.Type.APP_OPEN,
+                        attributes = mapOf()
+                    )
+                }
 
-                    override fun onAppFirstActivityCreated() {
-//                    Logger.d(TAG, "onAppFirstActivityCreated")
+                override fun onActivityResumed(activity: Activity) {
+                    instance?.trackEvent(
+                        name = EventModel.Type.APP_ACTIVE,
+                        attributes = mapOf()
+                    )
+                }
 
-                    }
+                override fun onActivityPaused(activity: Activity) {
+                    instance?.trackEvent(
+                        name = EventModel.Type.APP_INACTIVE,
+                        attributes = mapOf()
+                    )
+                }
 
-                    override fun onAppOpenWhenApplicationAlive() {
-//                    Logger.d(TAG, "onAppOpenWhenApplicationAlive")
+                override fun onActivityStopped(activity: Activity) {
+                    instance?.trackEvent(
+                        name = EventModel.Type.APP_CLOSE,
+                        attributes = mapOf()
+                    )
+                }
 
-                    }
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
 
-                    override fun onAppGoToForeground() {
-//                    Logger.d(TAG, "onAppGoToForeground")
-//                    instance?.trackEvent(
-//                        type = EventModel.Type.APP_OPEN,
-//                        data = mutableMapOf()
-//                    )
-                    }
+                }
 
-                    override fun onAppGoToBackgroundViaHomeButton(foregroundActivity: Activity?) {
-//                    Logger.d(
-//                        TAG,
-//                        "onAppGoToBackgroundViaHomeButton: foregroundActivity=$foregroundActivity"
-//                    )
-//                    instance?.trackEvent(
-//                        type = EventModel.Type.APP_CLOSE,
-//                        data = mutableMapOf()
-//                    )
-                    }
-
-                    override fun onAppGoToBackgroundViaBackLastActivity(lastActivity: Activity?) {
-//                    Logger.d(TAG, "onAppGoToBackgroundViaBackLastActivity: lastActivity=$lastActivity")
-//                    instance?.trackEvent(
-//                        type = EventModel.Type.APP_TERMINATE,
-//                        data = mutableMapOf()
-//                    )
-                    }
-
-                })
-            )
+                override fun onActivityDestroyed(activity: Activity) {
+                    instance?.trackEvent(
+                        name = EventModel.Type.APP_TERMINATE,
+                        attributes = mapOf()
+                    )
+                }
+            })
         }
     }
 
@@ -360,18 +396,18 @@ class Polar(
         linkRepository.reset()
     }
 
-    fun trackEvent(
-        @EventModel.Type type: String?,
-        data: Map<String, String>?
-    ) {
-        trackEvent(
-            type = type,
-            time = Calendar.getInstance().apply {
-                timeInMillis = mKronosClock.getCurrentTimeMs()
-            },
-            data = data
-        )
-    }
+//    fun trackEvent(
+//        @EventModel.Type type: String?,
+//        data: Map<String, String>?
+//    ) {
+//        trackEvent(
+//            type = type,
+//            time = Calendar.getInstance().apply {
+//                timeInMillis = mKronosClock.getCurrentTimeMs()
+//            },
+//            data = data
+//        )
+//    }
 
     fun trackEvent(
         @EventModel.Type type: String?,
