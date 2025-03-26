@@ -53,6 +53,8 @@ import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String, data: Map<String, Any>?, error: Exception?) -> Unit
 
+//TODO: rename to PolarApp
+//TODO: cleanup unused codes
 class Polar(
     private val application: Application,
     private val appId: String,

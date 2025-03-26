@@ -63,6 +63,9 @@ data class UserSession(
                     Logger.d(TAG, "UpdateUser: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
                     shouldRetry = false
                 }
+
+                //TODO: how about http status code is 5xxm 4xx or 2xx? if status is 200 is success, otherwise throw error
+
             } catch (e: ConnectException) {
                 // Handle connection refused or other connection issues (no internet)
                 Logger.d(TAG, "UpdateUser: ⛔No internet connection + retry 🔁: $e")

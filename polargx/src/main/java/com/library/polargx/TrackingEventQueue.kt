@@ -105,6 +105,7 @@ class TrackingEventQueue(val file: File) : KoinComponent {
                     Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔")
                     break
                 }
+                //TODO: how about http status code is 4xx or 2xx? if status is 200 is success, otherwise throw error
             } catch (e: ConnectException) {
                 Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔: $e")
                 break

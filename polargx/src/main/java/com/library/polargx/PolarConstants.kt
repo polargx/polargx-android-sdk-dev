@@ -33,4 +33,6 @@ object PolarConstants {
             }
         }
     }
+
+    //TODO: need to define PolarEventKey
 }
