@@ -15,7 +15,7 @@ data class EventTrackRequest(
     @SerialName("eventTime")
     val eventTime: String? = null,
     @SerialName("data")
-    val data: Map<String, String?>? = null
+    val data: Map<String, String>? = null
 ) {
     
     companion object {

@@ -6,7 +6,6 @@ import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.polargx.configuration.Configuration
 import com.library.polargx.di.polarModule
@@ -37,8 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
@@ -47,17 +46,17 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import java.net.ConnectException
-import java.net.URL
 import java.net.UnknownHostException
 import java.time.Instant
 import java.util.Calendar
 import java.util.UUID
 
-typealias OnLinkClickHandler = (link: URL, data: Map<String, Any>?, error: Throwable?) -> Unit
+typealias OnLinkClickHandler = (link: String, data: Map<String, Any>?, error: Exception?) -> Unit
 
 class Polar(
     private val application: Application,
     private val appId: String,
+    private val onLinkClickHandler: OnLinkClickHandler
 ) : KoinComponent {
 
     private val eventRepository: EventRepository by inject()
@@ -126,6 +125,7 @@ class Polar(
                     instance = Polar(
                         application = application,
                         appId = appId,
+                        onLinkClickHandler = onLinkClickHandler
                     ).apply {
                         startInject()
                         mKronosClock = AndroidClockFactory.createKronosClock(application)
@@ -139,7 +139,6 @@ class Polar(
                 } else {
                     mLastListener?.onInitFinished(null, null)
                 }
-                instance?.initListener()
             }
         }
 
@@ -206,76 +205,13 @@ class Polar(
         }
     }
 
-    suspend fun startInitializingApp() {
+    fun startInitializingApp() {
+        startTrackingAppLifeCycle()
+
         val pendingEventFiles = FileStorage
             .listFiles(appDirectory)
             .filter { it.startsWith("events_") }
         startResolvingPendingEvents(pendingEventFiles)
-
-        reset()
-        var shouldRetry = true
-        do {
-            try {
-                val now = Calendar.getInstance().apply {
-                    timeInMillis = mKronosClock.getCurrentTimeMs()
-                }
-                val launchEvent = EventModel(
-                    organizationUnid = appId,
-                    eventName = EventModel.Type.APP_LAUNCH,
-                    eventTime = DateTimeUtils.calendarToString(
-                        source = now,
-                        format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
-                        timeZone = PolarConstants.DateTime.utcTimeZone,
-                    ),
-                    data = mapOf()
-                )
-                val request = EventTrackRequest.from(launchEvent)
-                val response = eventRepository.rawTrack(request)
-                if (response.status.isSuccess()) {
-                    Logger.d(
-                        TAG,
-                        "startInitializingApp: successful ✅ with ${Configuration.Env.name} environment"
-                    )
-                    isAppInitialed = true
-                    shouldRetry = false
-                }
-                if (response.status.value == 403) {
-                    Logger.d(TAG, "startInitializingApp: ⛔⛔⛔ INVALID appId or xApiKey! ⛔⛔⛔")
-                    shouldRetry = false
-                }
-            } catch (throwable: Throwable) {
-                when (throwable) {
-                    is ConnectException -> {
-                        // Handle connection refused or other connection issues (no internet)
-                        Logger.d(
-                            TAG,
-                            "startInitializingApp: ⛔No internet connection + retry 🔁 ex=$throwable"
-                        )
-                        shouldRetry = true
-                        delay(1000)
-                    }
-
-                    is UnknownHostException -> {
-                        // Handle DNS resolution failures (no internet or incorrect URL)
-                        Logger.d(
-                            TAG,
-                            "startInitializingApp: ⛔Unknown host + retry 🔁 ex=$throwable"
-                        )
-                        shouldRetry = true
-                        delay(1000)
-                    }
-
-                    else -> {
-                        // Handle other exceptions (e.g., server errors, JSON parsing)
-                        Logger.d(
-                            TAG,
-                            "startInitializingApp: ⛔⛔⛔An error occurred ⛔⛔⛔ ex=$throwable"
-                        )
-                        shouldRetry = false
-                    }
-                }
-            }
-        } while (shouldRetry)
     }
 
     /**
@@ -284,25 +220,23 @@ class Polar(
      * - Backup user session into the otherUserSessions to keep running for sending events
      */
     private fun setUser(userID: String?, attributes: Map<String, String>?) {
-        CoroutineScope(Dispatchers.Main).launch {
-            currentUserSession?.let { userSession ->
-                if (userSession.userID != userID) {
-                    currentUserSession = null
-                    otherUserSessions.add(userSession)
-                }
+        currentUserSession?.let { userSession ->
+            if (userSession.userID != userID) {
+                currentUserSession = null
+                otherUserSessions.add(userSession)
             }
+        }
 
-            if (currentUserSession == null && userID != null) {
-                val name = "events_${Instant.now().epochSecond}_${UUID.randomUUID()}.json"
-                val file = appDirectory.file(name)
-                Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
+        if (currentUserSession == null && userID != null) {
+            val name = "events_${Instant.now().epochSecond}_${UUID.randomUUID()}.json"
+            val file = appDirectory.file(name)
+            Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
 
-                currentUserSession = UserSession(
-                    organizationUnid = appId,
-                    userID = userID,
-                    trackingFileStorage = file
-                )
-            }
+            currentUserSession = UserSession(
+                organizationUnid = appId,
+                userID = userID,
+                trackingFileStorage = file
+            )
 
             currentUserSession?.setAttributes(attributes ?: emptyMap())
         }
@@ -319,6 +253,53 @@ class Polar(
             )
             currentUserSession?.trackEvent(name, date, attributes)
         }
+    }
+
+    private fun startTrackingAppLifeCycle() {
+        application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+
+            }
+
+            override fun onActivityStarted(activity: Activity) {
+                instance?.trackEvent(
+                    name = EventModel.Type.APP_OPEN,
+                    attributes = mapOf()
+                )
+            }
+
+            override fun onActivityResumed(activity: Activity) {
+                instance?.trackEvent(
+                    name = EventModel.Type.APP_ACTIVE,
+                    attributes = mapOf()
+                )
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                instance?.trackEvent(
+                    name = EventModel.Type.APP_INACTIVE,
+                    attributes = mapOf()
+                )
+            }
+
+            override fun onActivityStopped(activity: Activity) {
+                instance?.trackEvent(
+                    name = EventModel.Type.APP_CLOSE,
+                    attributes = mapOf()
+                )
+            }
+
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+
+            }
+
+            override fun onActivityDestroyed(activity: Activity) {
+                instance?.trackEvent(
+                    name = EventModel.Type.APP_TERMINATE,
+                    attributes = mapOf()
+                )
+            }
+        })
     }
 
     private fun startResolvingPendingEvents(pendingEventFiles: List<String>) {
@@ -339,55 +320,6 @@ class Polar(
                     FileStorage.remove(pendingEventFile, appDirectory)
                 }
             }
-        }
-    }
-
-    private fun initListener() {
-        CoroutineScope(Dispatchers.Main).launch {
-            application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-
-                }
-
-                override fun onActivityStarted(activity: Activity) {
-                    instance?.trackEvent(
-                        name = EventModel.Type.APP_OPEN,
-                        attributes = mapOf()
-                    )
-                }
-
-                override fun onActivityResumed(activity: Activity) {
-                    instance?.trackEvent(
-                        name = EventModel.Type.APP_ACTIVE,
-                        attributes = mapOf()
-                    )
-                }
-
-                override fun onActivityPaused(activity: Activity) {
-                    instance?.trackEvent(
-                        name = EventModel.Type.APP_INACTIVE,
-                        attributes = mapOf()
-                    )
-                }
-
-                override fun onActivityStopped(activity: Activity) {
-                    instance?.trackEvent(
-                        name = EventModel.Type.APP_CLOSE,
-                        attributes = mapOf()
-                    )
-                }
-
-                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-
-                }
-
-                override fun onActivityDestroyed(activity: Activity) {
-                    instance?.trackEvent(
-                        name = EventModel.Type.APP_TERMINATE,
-                        attributes = mapOf()
-                    )
-                }
-            })
         }
     }
 
@@ -514,9 +446,14 @@ class Polar(
             activity,
             mKronosClock.getCurrentTimeMs()
         )
-        val clickTime = Calendar.getInstance().apply {
+        val now = Calendar.getInstance().apply {
             timeInMillis = mKronosClock.getCurrentTimeMs()
         }
+        val clickTime = DateTimeUtils.calendarToString(
+            now,
+            PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
+            PolarConstants.DateTime.utcTimeZone,
+        )
         if (!uri?.path.isNullOrEmpty()) {
             try {
                 val getLinkResponse = linkRepository.fetchLinkData(
@@ -526,17 +463,13 @@ class Polar(
                 mLastLink = getLinkResponse.data?.sdkLinkData?.toExternal()
 
                 val trackRequest = LinkTrackRequest(
-                    clickTime = DateTimeUtils.calendarToString(
-                        clickTime,
-                        PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
-                        PolarConstants.DateTime.utcTimeZone,
-                    ),
                     domain = subDomain,
                     slug = path,
-                    fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
                     trackType = LinkTrackRequest.TrackType.APP_CLICK,
-                    deviceData = mutableMapOf(),
-                    additionalData = mutableMapOf(),
+                    clickTime = clickTime,
+                    fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
+                    deviceData = mapOf(),
+                    additionalData = mapOf(),
                 )
                 val clid = uri?.getQueryParameter("__clid")
                 if (clid.isNullOrEmpty()) {
@@ -548,9 +481,18 @@ class Polar(
                     val request = LinkClickRequest(sdkUsed = true)
                     linkRepository.linkClick(clid, request)
                 }
+
+                withContext(Dispatchers.Main) {
+                    onLinkClickHandler(uri.toString(), mLastLink?.data, null)
+                }
+
                 mLastListener?.onInitFinished(mLastLink?.data, null)
-            } catch (throwable: Throwable) {
-                mLastListener?.onInitFinished(null, throwable)
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onLinkClickHandler(uri.toString(), null, e)
+                }
+
+                mLastListener?.onInitFinished(null, e)
             }
             return
         }

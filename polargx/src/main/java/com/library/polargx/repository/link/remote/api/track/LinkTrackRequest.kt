@@ -6,26 +6,20 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LinkTrackRequest(
-    @SerialName("clickTime")
-    val clickTime: String?,
-
     @SerialName("domain")
     val domain: String?,
-
-    @SerialName("fingerprint")
-    val fingerprint: String?,
-
     @SerialName("slug")
     val slug: String?,
-
     @SerialName("trackType")
     val trackType: String?,
-
-    @SerialName("additionalData")
-    val additionalData: Map<String, String?>?,
-
+    @SerialName("clickTime")
+    val clickTime: String?,
+    @SerialName("fingerprint")
+    val fingerprint: String?,
     @SerialName("deviceData")
-    val deviceData: Map<String, String?>?,
+    val deviceData: Map<String, String>?,
+    @SerialName("additionalData")
+    val additionalData: Map<String, String>?,
 ) {
 
     @Retention(value = AnnotationRetention.SOURCE)

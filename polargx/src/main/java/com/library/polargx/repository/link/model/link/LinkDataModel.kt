@@ -11,7 +11,7 @@ data class LinkDataModel(
     @SerialName("analyticsTags")
     val analyticsTags: AnalyticsTags?,
     @SerialName("data")
-    val data: Map<String, String?>?,
+    val data: Map<String, String>?,
     @SerialName("slug")
     val slug: String?,
     @SerialName("socialMediaTags")
