@@ -22,7 +22,6 @@ import com.library.polargx.logger.Logger
 import com.library.polargx.model.configs.ConfigsModel
 import com.library.polargx.repository.event.EventRepository
 import com.library.polargx.repository.event.model.EventModel
-import com.library.polargx.repository.event.remote.api.EventTrackRequest
 import com.library.polargx.repository.link.LinkRepository
 import com.library.polargx.repository.link.model.link.LinkDataModel
 import com.library.polargx.repository.link.remote.api.click.LinkClickRequest
@@ -30,14 +29,10 @@ import com.library.polargx.repository.link.remote.api.track.LinkTrackRequest
 import com.library.polargx.utils.DateTimeUtils
 import com.lyft.kronos.AndroidClockFactory
 import com.lyft.kronos.KronosClock
-import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
@@ -45,17 +40,13 @@ import org.koin.core.component.inject
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
-import java.net.ConnectException
-import java.net.UnknownHostException
 import java.time.Instant
 import java.util.Calendar
 import java.util.UUID
 
-typealias OnLinkClickHandler = (link: String, data: Map<String, Any>?, error: Exception?) -> Unit
+typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
 
-//TODO: rename to PolarApp
-//TODO: cleanup unused codes
-class Polar(
+class PolarApp(
     private val application: Application,
     private val appId: String,
     private val onLinkClickHandler: OnLinkClickHandler
@@ -65,10 +56,6 @@ class Polar(
     private val linkRepository: LinkRepository by inject()
 
     private lateinit var mKronosClock: KronosClock
-
-    private var isAppInitialed: Boolean? = null
-
-    private var mEventTrackingJob: Job? = null
 
     private var mLastLink: LinkDataModel? = null
 
@@ -86,7 +73,7 @@ class Polar(
         const val TAG = ">>>Polar"
 
         @SuppressLint("StaticFieldLeak")
-        private var instance: Polar? = null
+        private var instance: PolarApp? = null
         private var mConfigs: ConfigsModel? = null
 
         var isDevelopmentEnabled = false
@@ -106,7 +93,7 @@ class Polar(
             return mConfigs
         }
 
-        fun isAppInitializing(): Boolean {
+        private fun isAppInitializing(): Boolean {
             return mInitAppJob?.isActive == true
         }
 
@@ -124,7 +111,7 @@ class Polar(
             mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
                 mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
                 if (instance == null) {
-                    instance = Polar(
+                    instance = PolarApp(
                         application = application,
                         appId = appId,
                         onLinkClickHandler = onLinkClickHandler
@@ -250,8 +237,8 @@ class Polar(
                 source = Calendar.getInstance().apply {
                     timeInMillis = mKronosClock.getCurrentTimeMs()
                 },
-                format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
-                timeZone = PolarConstants.DateTime.utcTimeZone,
+                format = Constants.DateTime.DEFAULT_DATE_FORMAT,
+                timeZone = Constants.DateTime.utcTimeZone,
             )
             currentUserSession?.trackEvent(name, date, attributes)
         }
@@ -325,106 +312,6 @@ class Polar(
         }
     }
 
-    private suspend fun reset() {
-        eventRepository.reset()
-        linkRepository.reset()
-    }
-
-//    fun trackEvent(
-//        @EventModel.Type type: String?,
-//        data: Map<String, String>?
-//    ) {
-//        trackEvent(
-//            type = type,
-//            time = Calendar.getInstance().apply {
-//                timeInMillis = mKronosClock.getCurrentTimeMs()
-//            },
-//            data = data
-//        )
-//    }
-
-    fun trackEvent(
-        @EventModel.Type type: String?,
-        time: Calendar,
-        data: Map<String, String>?
-    ) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val event = EventModel(
-                organizationUnid = appId,
-                eventName = type,
-//                eventTime = DateTimeUtils.calendarToString(
-//                    source = time,
-//                    format = LinkAttributionConstants.DateTime.DEFAULT_DATE_FORMAT,
-//                ),
-                eventTime = DateTimeUtils.calendarToString(
-                    source = time,
-                    format = PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
-                    timeZone = PolarConstants.DateTime.utcTimeZone,
-                ),
-                data = data
-            )
-            val eventList = eventRepository.getCacheEventList()?.toMutableList() ?: mutableListOf()
-            eventList.add(event)
-            eventRepository.setCacheEventList(eventList)
-            startTrackingQueueIfNeeded()
-        }
-    }
-
-    private fun startTrackingQueueIfNeeded() {
-        if (mEventTrackingJob?.isActive == true) return
-        mEventTrackingJob = CoroutineScope(Dispatchers.IO).launch {
-            eventRepository.getCacheEventList()?.let { eventList ->
-                if (eventList.isEmpty()) return@launch
-                eventList.toMutableList().map { event ->
-                    async {
-                        try {
-                            val request = EventTrackRequest.from(event)
-                            val response = eventRepository.rawTrack(request)
-                            if (response.status.isSuccess()) {
-                                Logger.d(
-                                    TAG,
-                                    "startTrackingQueueIfNeeded: successful ✅, event=$event"
-                                )
-                                val latestEventList =
-                                    eventRepository.getCacheEventList()?.toMutableList()
-                                latestEventList?.remove(event)
-                                eventRepository.setCacheEventList(latestEventList)
-                            } else {
-                                val latestEventList =
-                                    eventRepository.getCacheEventList()?.toMutableList()
-                                latestEventList?.remove(event)
-                                eventRepository.setCacheEventList(latestEventList)
-                            }
-                        } catch (throwable: Throwable) {
-                            Logger.d(
-                                TAG,
-                                "startTrackingQueueIfNeeded: ⛔error: ex=$throwable, event=$event"
-                            )
-                            when (throwable) {
-                                is ConnectException -> {
-                                    // Handle connection refused or other connection issues (no internet)
-                                }
-
-                                is UnknownHostException -> {
-                                    // Handle DNS resolution failures (no internet or incorrect URL)
-                                }
-
-                                else -> {
-                                    val latestEventList =
-                                        eventRepository.getCacheEventList()?.toMutableList()
-                                    latestEventList?.remove(event)
-                                    eventRepository.setCacheEventList(latestEventList)
-                                }
-                            }
-                        }
-                    }
-                }.awaitAll()
-
-                startTrackingQueueIfNeeded()
-            }
-        }
-    }
-
     suspend fun init() {
         handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
     }
@@ -453,8 +340,8 @@ class Polar(
         }
         val clickTime = DateTimeUtils.calendarToString(
             now,
-            PolarConstants.DateTime.DEFAULT_DATE_FORMAT,
-            PolarConstants.DateTime.utcTimeZone,
+            Constants.DateTime.DEFAULT_DATE_FORMAT,
+            Constants.DateTime.utcTimeZone,
         )
         if (!uri?.path.isNullOrEmpty()) {
             try {
@@ -484,17 +371,11 @@ class Polar(
                     linkRepository.linkClick(clid, request)
                 }
 
-                withContext(Dispatchers.Main) {
-                    onLinkClickHandler(uri.toString(), mLastLink?.data, null)
-                }
-
                 mLastListener?.onInitFinished(mLastLink?.data, null)
+                onLinkClickHandler(uri.toString(), mLastLink?.data, null)
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    onLinkClickHandler(uri.toString(), null, e)
-                }
-
                 mLastListener?.onInitFinished(null, e)
+                onLinkClickHandler(uri.toString(), null, e)
             }
             return
         }
@@ -523,21 +404,6 @@ class Polar(
                         "\nwindow.density=${density}" +
                         "\nwindow.densityDpi=${densityDpi}"
             )
-//                linkRepository.fetchLinkMatches()
-//                getLinkByMatching()
-        }
-    }
-
-    private fun onInternetConnectionChanged(connected: Boolean) {
-        CoroutineScope(Dispatchers.IO).launch {
-            if (connected) {
-                if (isAppInitialed == true) {
-                    startTrackingQueueIfNeeded()
-                    return@launch
-                }
-                if (isAppInitializing()) return@launch
-                startInitializingApp()
-            }
         }
     }
 }

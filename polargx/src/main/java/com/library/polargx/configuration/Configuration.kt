@@ -1,6 +1,6 @@
 package com.library.polargx.configuration
 
-import com.library.polargx.Polar
+import com.library.polargx.PolarApp
 
 open class EnvConfiguration(
     open val name: String,
@@ -23,7 +23,7 @@ class ProdEnvConfiguration(
 object Configuration {
     const val Brand = "Polar"
 
-    val Env: EnvConfiguration = if (Polar.isDevelopmentEnabled) {
+    val Env: EnvConfiguration = if (PolarApp.isDevelopmentEnabled) {
         DevEnvConfiguration()
     } else {
         ProdEnvConfiguration()

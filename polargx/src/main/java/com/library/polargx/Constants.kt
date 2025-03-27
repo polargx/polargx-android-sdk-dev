@@ -2,7 +2,7 @@ package com.library.polargx
 
 import java.util.TimeZone
 
-object PolarConstants {
+object Constants {
 
     object Koin {
         const val APP_HTTP_CLIENT = "PolarGXConstants.Koin.APP_HTTP_CLIENT"

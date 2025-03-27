@@ -19,7 +19,7 @@ data class ApiError(
 
     @SerialName("api_version")
     var apiVersion: Double? = null,
-) : Throwable(), Parcelable {
+) : Exception(), Parcelable {
 
     constructor(data: String?) : this() {
         if (data == null) return
@@ -28,8 +28,8 @@ data class ApiError(
             code = jsonObj.getEvenNonExisted("code") as? Int?
             message = jsonObj.getEvenNonExisted("message") as? String?
             apiVersion = jsonObj.getEvenNonExisted("api_version") as? Double?
-        } catch (ex: Throwable) {
-            Logger.d("ApiError", "ex=$ex")
+        } catch (e: Exception) {
+            Logger.d("ApiError", "error: $e")
         }
     }
 }

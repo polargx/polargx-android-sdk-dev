@@ -3,7 +3,7 @@ package com.app.main
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.library.polargx.Polar
+import com.library.polargx.PolarApp
 import com.polargx.sample.R
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main),
 
     override fun onStart() {
         super.onStart()
-        Polar.bind(
+        PolarApp.bind(
             activity = this,
             uri = intent?.data,
             listener = { attributes, error ->
@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main),
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Polar.reBind(
+        PolarApp.reBind(
             activity = this,
             uri = intent.data,
             listener = { attributes, error ->

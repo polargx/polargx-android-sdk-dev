@@ -1,7 +1,7 @@
 package com.library.polargx.repository.link.local
 
 import android.content.SharedPreferences
-import com.library.polargx.PolarConstants
+import com.library.polargx.Constants
 import com.library.polargx.repository.link.local.model.link.LinkDataEntity
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,7 +13,7 @@ class LinkLocalDatasourceImpl(
     override fun getLinkData(): LinkDataEntity? {
         try {
             val jsonStr = sf.getString(
-                PolarConstants.Local.Prefers.Link.LINK_DATA_KEY,
+                Constants.Local.Prefers.Link.LINK_DATA_KEY,
                 null
             ) ?: return null
             return Json.decodeFromString<LinkDataEntity>(jsonStr)
@@ -30,7 +30,7 @@ class LinkLocalDatasourceImpl(
         }
         this.sf.edit()
             .putString(
-                PolarConstants.Local.Prefers.Link.LINK_DATA_KEY,
+                Constants.Local.Prefers.Link.LINK_DATA_KEY,
                 jsonStr
             ).apply()
     }

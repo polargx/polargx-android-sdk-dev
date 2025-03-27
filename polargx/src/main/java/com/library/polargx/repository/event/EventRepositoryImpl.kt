@@ -2,12 +2,12 @@ package com.library.polargx.repository.event
 
 import android.content.Context
 import com.library.polargx.model.ApiError
+import com.library.polargx.model.empty.EmptyModel
 import com.library.polargx.repository.event.local.EventLocalDatasource
 import com.library.polargx.repository.event.local.model.EventEntity.Companion.toEntity
 import com.library.polargx.repository.event.model.EventModel
 import com.library.polargx.repository.event.remote.EventRemoteDatasource
 import com.library.polargx.repository.event.remote.api.EventTrackRequest
-import com.library.polargx.repository.event.remote.api.EventTrackResponse
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
@@ -54,17 +54,15 @@ class EventRepositoryImpl(
     }
 
     override suspend fun rawTrack(request: EventTrackRequest?): HttpResponse {
-        return remoteDatasource.track(request = request)
+        return remoteDatasource.trackEvent(request = request)
     }
 
-    override suspend fun trackEvent(request: EventTrackRequest?): EventTrackResponse {
-        val response = remoteDatasource.track(
-            request = request,
-        )
-        if (!response.status.isSuccess()) {
-            throw ApiError(response.bodyAsText())
+    override suspend fun trackEvent(request: EventTrackRequest?): EmptyModel? {
+        val response = remoteDatasource.trackEvent(request)
+        if (response.status.isSuccess()) {
+            return response.body<EmptyModel?>()
         }
-        return response.body<EventTrackResponse>()
+        throw ApiError(response.bodyAsText())
     }
 
     override suspend fun reset() {

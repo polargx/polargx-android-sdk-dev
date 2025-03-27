@@ -1,6 +1,7 @@
 package com.library.polargx
 
 import com.library.polargx.logger.Logger
+import com.library.polargx.model.ApiError
 import com.library.polargx.repository.event.EventRepository
 import com.library.polargx.repository.event.model.EventModel
 import com.library.polargx.repository.event.remote.api.EventTrackRequest
@@ -9,7 +10,6 @@ import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
-import java.net.ConnectException
 import java.net.UnknownHostException
 
 /**
@@ -99,21 +99,23 @@ class TrackingEventQueue(val file: File) : KoinComponent {
 
             try {
                 val request = EventTrackRequest.from(event)
-                val response = eventRepository.rawTrack(request)
-
-                if (response.status.value >= 500) {
-                    Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔")
-                    break
-                }
-                //TODO: how about http status code is 4xx or 2xx? if status is 200 is success, otherwise throw error
-            } catch (e: ConnectException) {
-                Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔: $e")
-                break
+                eventRepository.trackEvent(request)
             } catch (e: UnknownHostException) {
+                // Network error: stop sending, keep elements
                 Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔: $e")
                 break
             } catch (e: Exception) {
-                Logger.d(TAG, "Tracking: failed ⛔ + retry 🔁: $e")
+                // Server error: stop sending, keep elements saved in disk
+                if (e is ApiError) {
+                    val code = e.code ?: return
+                    if (code >= 500) {
+                        Logger.d(TAG, "ApiError: failed ⛔ + stopped ⛔: $e")
+                        break
+                    }
+                }
+
+                // Server error: ignore element and send next one.
+                Logger.d(TAG, "Tracking: failed ⛔ + next 🔁: $e")
             }
 
             pop()

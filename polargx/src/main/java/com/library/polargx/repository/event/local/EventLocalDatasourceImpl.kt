@@ -3,7 +3,7 @@ package com.library.polargx.repository.event.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import com.library.polargx.PolarConstants
+import com.library.polargx.Constants
 import com.library.polargx.repository.event.local.model.EventEntity
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -21,7 +21,7 @@ class EventLocalDatasourceImpl(
         }
         sf.edit()
             .putString(
-                PolarConstants.Local.Prefers.Event.EVENTS_KEY,
+                Constants.Local.Prefers.Event.EVENTS_KEY,
                 jsonStr
             )
             .apply()
@@ -30,7 +30,7 @@ class EventLocalDatasourceImpl(
     override suspend fun getAllCacheEventList(): List<EventEntity>? {
         try {
             val jsonStr = sf.getString(
-                PolarConstants.Local.Prefers.Event.EVENTS_KEY,
+                Constants.Local.Prefers.Event.EVENTS_KEY,
                 null
             ) ?: return null
             return Json.decodeFromString<List<EventEntity>>(jsonStr)
@@ -67,7 +67,7 @@ class EventLocalDatasourceImpl(
 
     override suspend fun isFirstTimeLaunch(context: Context?, nowInMillis: Long): Boolean {
         if (context == null) return false
-        val firstTime = sf.getBoolean(PolarConstants.Local.Prefers.FIRST_TIME_KEY, true)
+        val firstTime = sf.getBoolean(Constants.Local.Prefers.FIRST_TIME_KEY, true)
         if (!firstTime) return false // Already marked as not first time
 
         try {
@@ -75,9 +75,9 @@ class EventLocalDatasourceImpl(
             val installTimeMillis = packageInfo.firstInstallTime
 
             // Check if install time is stored. If not, store it.
-            val storedInstallTime = sf.getLong(PolarConstants.Local.Prefers.INSTALL_TIME_KEY, 0L)
+            val storedInstallTime = sf.getLong(Constants.Local.Prefers.INSTALL_TIME_KEY, 0L)
             if (storedInstallTime == 0L) {
-                sf.edit().putLong(PolarConstants.Local.Prefers.INSTALL_TIME_KEY, installTimeMillis).apply()
+                sf.edit().putLong(Constants.Local.Prefers.INSTALL_TIME_KEY, installTimeMillis).apply()
             }
 
             val timeDifferenceMillis = nowInMillis - installTimeMillis
@@ -85,11 +85,11 @@ class EventLocalDatasourceImpl(
 
             // If it's a very recent install (adjust threshold), it's the first launch.
             if (timeDifferenceSeconds < 60) { // Adjust threshold as needed
-                sf.edit().putBoolean(PolarConstants.Local.Prefers.FIRST_TIME_KEY, false).apply() // Mark as not first time
+                sf.edit().putBoolean(Constants.Local.Prefers.FIRST_TIME_KEY, false).apply() // Mark as not first time
                 return true
             } else {
                 //If the time difference is greater than the threshold, and the app was reinstalled, it is not the first time
-                sf.edit().putBoolean(PolarConstants.Local.Prefers.FIRST_TIME_KEY, false).apply()
+                sf.edit().putBoolean(Constants.Local.Prefers.FIRST_TIME_KEY, false).apply()
                 return false
             }
 

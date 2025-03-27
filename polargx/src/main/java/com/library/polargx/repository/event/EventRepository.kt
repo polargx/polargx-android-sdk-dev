@@ -1,9 +1,9 @@
 package com.library.polargx.repository.event
 
 import android.content.Context
+import com.library.polargx.model.empty.EmptyModel
 import com.library.polargx.repository.event.model.EventModel
 import com.library.polargx.repository.event.remote.api.EventTrackRequest
-import com.library.polargx.repository.event.remote.api.EventTrackResponse
 import io.ktor.client.statement.HttpResponse
 
 interface EventRepository {
@@ -14,7 +14,7 @@ interface EventRepository {
     suspend fun setCacheEventList(events: List<EventModel>?)
     suspend fun getCacheEventList(): List<EventModel>?
     suspend fun rawTrack(request: EventTrackRequest?): HttpResponse
-    suspend fun trackEvent(request: EventTrackRequest?): EventTrackResponse
+    suspend fun trackEvent(request: EventTrackRequest?): EmptyModel?
     suspend fun reset()
 
     suspend fun isFirstTimeLaunch(

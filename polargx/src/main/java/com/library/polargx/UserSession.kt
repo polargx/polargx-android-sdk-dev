@@ -1,6 +1,7 @@
 package com.library.polargx
 
 import com.library.polargx.logger.Logger
+import com.library.polargx.model.ApiError
 import com.library.polargx.repository.event.model.EventModel
 import com.library.polargx.repository.user.UserRepository
 import com.library.polargx.repository.user.model.UpdateUserModel
@@ -12,8 +13,6 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
-import java.net.ConnectException
-import java.net.UnknownHostException
 
 /**
  * Purpose: create user if needed by calling UpdateUser api.
@@ -51,37 +50,26 @@ data class UserSession(
      * Retry when network connection issue, server returns status code #400.
      */
     private suspend fun startToUpdateUser() {
-        var shouldRetry = false
+        var submitError: Exception? = null
 
         do {
             try {
                 val user = UpdateUserModel(organizationUnid, userID, attributes)
                 val request = UpdateUserRequest.from(user)
-                val response = userRepository.updateUser(request)
-
-                if (response.status.value == 403) {
-                    Logger.d(TAG, "UpdateUser: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
-                    shouldRetry = false
-                }
-
-                //TODO: how about http status code is 5xxm 4xx or 2xx? if status is 200 is success, otherwise throw error
-
-            } catch (e: ConnectException) {
-                // Handle connection refused or other connection issues (no internet)
-                Logger.d(TAG, "UpdateUser: ⛔No internet connection + retry 🔁: $e")
-                shouldRetry = true
-                delay(1000)
-            } catch (e: UnknownHostException) {
-                // Handle DNS resolution failures (no internet or incorrect URL)
-                Logger.d(TAG, "UpdateUser: ⛔Unknown host + retry 🔁: $e")
-                shouldRetry = true
-                delay(1000)
+                userRepository.updateUser(request)
             } catch (e: Exception) {
-                // Handle other exceptions (e.g., server errors, JSON parsing)
-                Logger.d(TAG, "UpdateUser: ⛔⛔⛔An error occurred ⛔⛔⛔: $e")
-                shouldRetry = false
+                if (e is ApiError) {
+                    if (e.code == 403) {
+                        Logger.d(TAG, "UpdateUser: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
+                        submitError = null
+                    }
+                } else {
+                    Logger.d(TAG, "UpdateUser: failed ⛔️ + retrying 🔁: $e")
+                    delay(1000)
+                    submitError = e
+                }
             }
-        } while (shouldRetry)
+        } while (submitError != null)
 
         trackingEventQueue.setReady()
         trackingEventQueue.sendEventsIfNeeded()

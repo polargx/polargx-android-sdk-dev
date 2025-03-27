@@ -15,7 +15,7 @@ class EventRemoteDatasourceImpl(
         const val TAG = ">>>EventRemoteDatasourceImpl"
     }
 
-    override suspend fun track(request: EventTrackRequest?): HttpResponse {
+    override suspend fun trackEvent(request: EventTrackRequest?): HttpResponse {
         return client.post {
             url.path("sdk/v1/events/track")
             setBody(request)

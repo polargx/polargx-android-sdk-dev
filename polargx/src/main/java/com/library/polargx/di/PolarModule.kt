@@ -1,8 +1,8 @@
 package com.library.polargx.di
 
 import android.content.Context
-import com.library.polargx.Polar
-import com.library.polargx.Polar.Companion.TAG
+import com.library.polargx.PolarApp
+import com.library.polargx.PolarApp.Companion.TAG
 import com.library.polargx.configuration.Configuration
 import com.library.polargx.logger.Logger
 import com.library.polargx.model.ApiError
@@ -83,7 +83,7 @@ val polarModule = module {
                 }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json)
-                    append("x-api-key", Polar.getConfigs()?.apiKey ?: "")
+                    append("x-api-key", PolarApp.getConfigs()?.apiKey ?: "")
                 }
             }
 
