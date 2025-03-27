@@ -41,10 +41,8 @@ class MyApplication : Application() {
 
         PolarApp.initialize(
             application = this,
-//            appId = BuildConfig.POLAR_APP_ID,
-//            apiKey = BuildConfig.POLAR_API_KEY,
-            appId = "ad71f83f-4bc3-447a-94c8-d78c3ec8cce2",
-            apiKey = "IF7M2WBS034QFvycReBBPavHfo5xXOkLOaOJmP9i",
+            appId = BuildConfig.POLAR_APP_ID,
+            apiKey = BuildConfig.POLAR_API_KEY,
             onLinkClickHandler = { link, data, error ->
                 Log.d(TAG, "\n[DEMO] detect clicked: $link, data: $data, error: $error\n")
             },
