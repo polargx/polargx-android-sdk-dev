@@ -6,6 +6,7 @@ import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.polargx.configuration.Configuration
 import com.library.polargx.di.polarModule
@@ -19,7 +20,6 @@ import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.helpers.FileStorage
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.logger.Logger
-import com.library.polargx.model.configs.ConfigsModel
 import com.library.polargx.repository.event.EventRepository
 import com.library.polargx.repository.event.model.EventModel
 import com.library.polargx.repository.link.LinkRepository
@@ -48,10 +48,11 @@ typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: E
 
 //TODO: PolarApp initializing should create a singleton (current app / shared in iOS)
 //TODO: can you add
-class PolarApp(
-    private val application: Application,
-    private val appId: String,
-    private val onLinkClickHandler: OnLinkClickHandler
+class PolarApp private constructor(
+    val application: Application,
+    val appId: String,
+    val apiKey: String,
+    val onLinkClickHandler: OnLinkClickHandler
 ) : KoinComponent {
 
     private val eventRepository: EventRepository by inject()
@@ -76,7 +77,6 @@ class PolarApp(
 
         @SuppressLint("StaticFieldLeak")
         private var instance: PolarApp? = null
-        private var mConfigs: ConfigsModel? = null
 
         var isDevelopmentEnabled = false
         var isLoggingEnabled = false
@@ -91,9 +91,13 @@ class PolarApp(
         private var mLastListener: PolarInitListener? = null
         private var isReInitializing: Boolean? = null
 
-        fun getConfigs(): ConfigsModel? {
-            return mConfigs
-        }
+        @Volatile
+        private var _shared: PolarApp? = null
+
+        val shared: PolarApp
+            get() = _shared ?: synchronized(this) { // Ensure thread-safe
+                _shared ?: error("PolarApp hasn't been initialized!")
+            }
 
         private fun isAppInitializing(): Boolean {
             return mInitAppJob?.isActive == true
@@ -107,80 +111,25 @@ class PolarApp(
             application: Application,
             appId: String,
             apiKey: String,
-            onLinkClickHandler: OnLinkClickHandler,
-            onInitFinished: () -> Unit
+            onLinkClickHandler: OnLinkClickHandler
         ) {
-            if (mInitAppJob?.isActive == true) {
-                mInitAppJob?.cancel()
-                mInitAppJob = null
+            _shared = PolarApp(
+                application = application,
+                appId = appId,
+                apiKey = apiKey,
+                onLinkClickHandler = onLinkClickHandler
+            ).apply {
+                startInject()
+                startInitializingApp()
+                mKronosClock = AndroidClockFactory.createKronosClock(application)
+                mKronosClock.sync()
             }
-            mInitAppJob = CoroutineScope(Dispatchers.IO).launch {
-                mConfigs = ConfigsModel(appId = appId, apiKey = apiKey)
-                if (instance == null) {
-                    instance = PolarApp(
-                        application = application,
-                        appId = appId,
-                        onLinkClickHandler = onLinkClickHandler
-                    ).apply {
-                        startInject()
-                        mKronosClock = AndroidClockFactory.createKronosClock(application)
-                        mKronosClock.sync()
-                    }
-                    onInitFinished()
-                }
-                instance?.startInitializingApp()
-                if (mLastUri != null) {
-                    instance?.init()
-                } else {
-                    mLastListener?.onInitFinished(null, null)
-                }
-            }
-        }
 
-        fun bind(
-            activity: Activity?,
-            uri: Uri?,
-            listener: PolarInitListener
-        ) {
-            Logger.d(TAG, "init: uri=$uri")
-            if (mGetLinkJob?.isActive == true) {
-                mGetLinkJob?.cancel()
+            if (mLastUri != null) {
+                shared.init()
+            } else {
+                mLastListener?.onInitFinished(null, null)
             }
-            mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-                isReInitializing = false
-                mLastUri = uri
-                mLastActivity = activity
-                mLastListener = listener
-                if (isAppInitializing()) return@launch
-                instance?.init()
-            }
-        }
-
-        fun reBind(
-            activity: Activity?,
-            uri: Uri?,
-            listener: PolarInitListener
-        ) {
-            Logger.d(TAG, "reInit: uri=$uri")
-            if (mGetLinkJob?.isActive == true) {
-                mGetLinkJob?.cancel()
-            }
-            mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-                isReInitializing = true
-                mLastUri = uri
-                mLastActivity = activity
-                mLastListener = listener
-                if (isAppInitializing()) return@launch
-                instance?.reInit()
-            }
-        }
-
-        fun updateUser(userID: String?, attributes: Map<String, String>?) {
-            instance?.setUser(userID, attributes)
-        }
-
-        fun trackEvent(name: String, attributes: Map<String, String>?) {
-            instance?.trackEvent(name, attributes)
         }
     }
 
@@ -209,12 +158,48 @@ class PolarApp(
         startResolvingPendingEvents(pendingEventFiles)
     }
 
+    fun bind(
+        activity: Activity?,
+        uri: Uri?,
+        listener: PolarInitListener
+    ) {
+        Logger.d(TAG, "init: uri=$uri")
+        if (mGetLinkJob?.isActive == true) {
+            mGetLinkJob?.cancel()
+        }
+        mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
+            isReInitializing = false
+            mLastUri = uri
+            mLastActivity = activity
+            mLastListener = listener
+            shared.init()
+        }
+    }
+
+    fun reBind(
+        activity: Activity?,
+        uri: Uri?,
+        listener: PolarInitListener
+    ) {
+        Logger.d(TAG, "reInit: uri=$uri")
+        if (mGetLinkJob?.isActive == true) {
+            mGetLinkJob?.cancel()
+        }
+        mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
+            isReInitializing = true
+            mLastUri = uri
+            mLastActivity = activity
+            mLastListener = listener
+            shared.reInit()
+        }
+    }
+
     /**
      * Set userID and attributes:
      * - Create current user session if needed
      * - Backup user session into the otherUserSessions to keep running for sending events
      */
-    private fun setUser(userID: String?, attributes: Map<String, String>?) {
+    fun updateUser(userID: String?, attributes: Map<String, String>?) {
         currentUserSession?.let { userSession ->
             if (userSession.userID != userID) {
                 currentUserSession = null
@@ -237,7 +222,7 @@ class PolarApp(
         }
     }
 
-    private fun trackEvent(name: String?, attributes: Map<String, String>?) {
+    fun trackEvent(name: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
             val date = DateTimeUtils.calendarToString(
                 source = Calendar.getInstance().apply {
@@ -318,25 +303,29 @@ class PolarApp(
         }
     }
 
-    suspend fun init() {
-        handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+    fun init() {
+        CoroutineScope(Dispatchers.IO).launch {
+            handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+        }
     }
 
-    suspend fun reInit() {
-        handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+    fun reInit() {
+        CoroutineScope(Dispatchers.IO).launch {
+            handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+        }
     }
 
     private suspend fun handleFetchLinkData(activity: Activity?, uri: Uri?) {
         if (activity == null) return
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains
-        val domain = uri?.host ?: ""
-        if (!domain.endsWith(supportedBaseDomains)) {
-            Logger.d(TAG, "handleFetchLinkData: Invalid domain! domain=$domain")
+        val domain = uri?.host
+        if (domain?.endsWith(supportedBaseDomains) != true) {
+            Logger.d(TAG, "Invalid domain: $domain")
             mLastListener?.onInitFinished(null, null)
             return
         }
         val subDomain = domain.replace(supportedBaseDomains, "")
-        val path = uri?.path?.replace("/", "")
+        val path = uri.path?.replace("/", "")
         val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
             activity,
             mKronosClock.getCurrentTimeMs()
@@ -349,7 +338,9 @@ class PolarApp(
             Constants.DateTime.DEFAULT_DATE_FORMAT,
             Constants.DateTime.utcTimeZone,
         )
-        if (!uri?.path.isNullOrEmpty()) {
+        Log.d("TESTING", "handleFetchLinkData: 1")
+        if (!uri.path.isNullOrEmpty()) {
+        Log.d("TESTING", "handleFetchLinkData: 2")
             try {
                 val getLinkResponse = linkRepository.fetchLinkData(
                     domain = subDomain,
@@ -366,7 +357,7 @@ class PolarApp(
                     deviceData = mapOf(),
                     additionalData = mapOf(),
                 )
-                val clid = uri?.getQueryParameter("__clid")
+                val clid = uri.getQueryParameter("__clid")
                 if (clid.isNullOrEmpty()) {
                     val trackResponse = linkRepository.track(trackRequest)
                     val linkClickUnid = trackResponse.data?.linkClick?.unid
@@ -385,7 +376,7 @@ class PolarApp(
             }
             return
         }
-        if (isFirstTimeLaunch && uri?.path.isNullOrEmpty()) {
+        if (isFirstTimeLaunch && uri.path.isNullOrEmpty()) {
             val windowMetrics = WindowMetricsCalculator.getOrCreate()
                 .computeCurrentWindowMetrics(activity)
             val width = windowMetrics.bounds.width()

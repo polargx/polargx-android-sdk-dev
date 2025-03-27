@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main),
         super.onStart()
 
         //TODO: use PolarApp.getInstance...().bind...
-        PolarApp.bind(
+        PolarApp.shared.bind(
             activity = this,
             uri = intent?.data,
             listener = { attributes, error ->
@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main),
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         //TODO: use PolarApp.getInstance...().reBind...
-        PolarApp.reBind(
+        PolarApp.shared.reBind(
             activity = this,
             uri = intent.data,
             listener = { attributes, error ->

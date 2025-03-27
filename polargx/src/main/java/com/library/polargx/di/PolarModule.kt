@@ -83,7 +83,8 @@ val polarModule = module {
                 }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json)
-                    append("x-api-key", PolarApp.getConfigs()?.apiKey ?: "")
+//                    append("x-api-key", PolarApp.getConfigs()?.apiKey ?: "")
+                    append("x-api-key", PolarApp.shared.apiKey)
                 }
             }
 
