@@ -100,22 +100,25 @@ class TrackingEventQueue(val file: File) : KoinComponent {
             try {
                 val request = EventTrackRequest.from(event)
                 eventRepository.trackEvent(request)
-            } catch (e: UnknownHostException) {
-                // Network error: stop sending, keep elements
-                Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔: $e")
-                break
+
             } catch (e: Exception) {
-                // Server error: stop sending, keep elements saved in disk
+                // Skip element only when statusCode is 400 to <500
+                //TODO: check again.
+                var shouldContinue = false
                 if (e is ApiError) {
                     val code = e.code ?: return
-                    if (code >= 500) {
-                        Logger.d(TAG, "ApiError: failed ⛔ + stopped ⛔: $e")
-                        break
+                    if (code >= 400 && code < 500) {
+                        shouldContinue = true
                     }
                 }
 
-                // Server error: ignore element and send next one.
-                Logger.d(TAG, "Tracking: failed ⛔ + next 🔁: $e")
+                if (shouldContinue) {
+                    Logger.d(TAG, "Tracking: failed ⛔ + next 🔁: $e")
+
+                }else{
+                    Logger.d(TAG, "ApiError: failed ⛔ + stopped ⛔: $e")
+                    break
+                }
             }
 
             pop()

@@ -46,6 +46,8 @@ import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
 
+//TODO: PolarApp initializing should create a singleton (current app / shared in iOS)
+//TODO: can you add
 class PolarApp(
     private val application: Application,
     private val appId: String,
@@ -96,6 +98,10 @@ class PolarApp(
         private fun isAppInitializing(): Boolean {
             return mInitAppJob?.isActive == true
         }
+
+        //TODO: current instance of PolarApp to access (not null) - shared in SwiftSDK
+        //TODO: call initialize function to make PolarApp instance immediately
+        //TODO: don't need onInitFinished -
 
         fun initialize(
             application: Application,

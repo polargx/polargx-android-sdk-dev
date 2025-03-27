@@ -47,22 +47,23 @@ class MyApplication : Application() {
             onLinkClickHandler = { link, data, error ->
                 Log.d(TAG, "\n[DEMO] detect clicked: $link, data: $data, error: $error\n")
             },
-            onInitFinished = {
-                PolarApp.updateUser(
-                    userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79401",
-                    attributes = mapOf(
-                        PolarEventKey.Name to "a",
-                        PolarEventKey.Email to "a@gmail.com",
-                    )
-                )
-                PolarApp.updateUser(
-                    userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79402",
-                    attributes = mapOf(
-                        PolarEventKey.Name to "b",
-                        PolarEventKey.Email to "b@gmail.com",
-                    )
-                )
-            }
+            onInitFinished = {}
+        )
+        //TODO: check this
+        //TODO: PolarApp.getInstance...().updateUser(...)
+        PolarApp.updateUser(
+            userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79401",
+            attributes = mapOf(
+                PolarEventKey.Name to "a",
+                PolarEventKey.Email to "a@gmail.com",
+            )
+        )
+        PolarApp.updateUser(
+            userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79402",
+            attributes = mapOf(
+                PolarEventKey.Name to "b",
+                PolarEventKey.Email to "b@gmail.com",
+            )
         )
     }
 
