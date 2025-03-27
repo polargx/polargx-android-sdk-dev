@@ -8,10 +8,6 @@ object Constants {
         const val APP_HTTP_CLIENT = "PolarGXConstants.Koin.APP_HTTP_CLIENT"
     }
 
-    object Configuration {
-        const val DOMAIN_SUFFIX = ".makelabs.ai"
-    }
-
     object DateTime {
         val utcTimeZone = TimeZone.getTimeZone("GMT+00:00")
 
@@ -34,5 +30,10 @@ object Constants {
         }
     }
 
-    //TODO: need to define PolarEventKey
+    object PolarEventKey {
+        const val Email = "email"
+        const val Name = "name"
+        const val FirstName = "firstName"
+        const val LastName = "lastName"
+    }
 }

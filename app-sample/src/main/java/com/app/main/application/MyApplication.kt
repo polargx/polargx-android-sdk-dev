@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.multidex.MultiDex
 import com.app.main.di.appModule
+import com.library.polargx.Constants.PolarEventKey
 import com.library.polargx.PolarApp
 import com.polargx.sample.BuildConfig
 import org.koin.android.ext.koin.androidContext
@@ -50,15 +51,15 @@ class MyApplication : Application() {
                 PolarApp.updateUser(
                     userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79401",
                     attributes = mapOf(
-                        "name" to "a",
-                        "email" to "a@gmail.com",
+                        PolarEventKey.Name to "a",
+                        PolarEventKey.Email to "a@gmail.com",
                     )
                 )
                 PolarApp.updateUser(
                     userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79402",
                     attributes = mapOf(
-                        "name" to "b",
-                        "email" to "b@gmail.com",
+                        PolarEventKey.Name to "b",
+                        PolarEventKey.Email to "b@gmail.com",
                     )
                 )
             }
