@@ -1,12 +1,10 @@
 package com.library.polargx
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.polargx.configuration.Configuration
 import com.library.polargx.di.polarModule
@@ -18,7 +16,6 @@ import com.library.polargx.extension.getManufacturer
 import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.helpers.FileStorage
-import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.logger.Logger
 import com.library.polargx.repository.event.EventRepository
 import com.library.polargx.repository.event.model.EventModel
@@ -27,8 +24,6 @@ import com.library.polargx.repository.link.model.link.LinkDataModel
 import com.library.polargx.repository.link.remote.api.click.LinkClickRequest
 import com.library.polargx.repository.link.remote.api.track.LinkTrackRequest
 import com.library.polargx.utils.DateTimeUtils
-import com.lyft.kronos.AndroidClockFactory
-import com.lyft.kronos.KronosClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,14 +37,12 @@ import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import java.time.Instant
 import java.util.Calendar
+import java.util.Date
 import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
 
-//TODO: PolarApp initializing should create a singleton (current app / shared in iOS)
-//TODO: can you add
 class PolarApp private constructor(
-    val application: Application,
     val appId: String,
     val apiKey: String,
     val onLinkClickHandler: OnLinkClickHandler
@@ -57,8 +50,7 @@ class PolarApp private constructor(
 
     private val eventRepository: EventRepository by inject()
     private val linkRepository: LinkRepository by inject()
-
-    private lateinit var mKronosClock: KronosClock
+    private val application: Application by inject()
 
     private var mLastLink: LinkDataModel? = null
 
@@ -75,21 +67,11 @@ class PolarApp private constructor(
     companion object {
         const val TAG = ">>>Polar"
 
-        @SuppressLint("StaticFieldLeak")
-        private var instance: PolarApp? = null
-
         var isDevelopmentEnabled = false
         var isLoggingEnabled = false
 
-        private var mInitAppJob: Job? = null
         private var mGetLinkJob: Job? = null
-
         private var mLastUri: Uri? = null
-
-        @SuppressLint("StaticFieldLeak")
-        private var mLastActivity: Activity? = null
-        private var mLastListener: PolarInitListener? = null
-        private var isReInitializing: Boolean? = null
 
         @Volatile
         private var _shared: PolarApp? = null
@@ -99,37 +81,19 @@ class PolarApp private constructor(
                 _shared ?: error("PolarApp hasn't been initialized!")
             }
 
-        private fun isAppInitializing(): Boolean {
-            return mInitAppJob?.isActive == true
-        }
-
-        //TODO: current instance of PolarApp to access (not null) - shared in SwiftSDK
-        //TODO: call initialize function to make PolarApp instance immediately
-        //TODO: don't need onInitFinished -
-
         fun initialize(
-            application: Application,
             appId: String,
             apiKey: String,
             onLinkClickHandler: OnLinkClickHandler
         ) {
             _shared = PolarApp(
-                application = application,
                 appId = appId,
                 apiKey = apiKey,
                 onLinkClickHandler = onLinkClickHandler
-            ).apply {
-                startInject()
-                startInitializingApp()
-                mKronosClock = AndroidClockFactory.createKronosClock(application)
-                mKronosClock.sync()
-            }
+            )
 
-            if (mLastUri != null) {
-                shared.init()
-            } else {
-                mLastListener?.onInitFinished(null, null)
-            }
+            shared.startInject()
+            shared.startInitializingApp()
         }
     }
 
@@ -149,7 +113,7 @@ class PolarApp private constructor(
         }
     }
 
-    fun startInitializingApp() {
+    private fun startInitializingApp() {
         startTrackingAppLifeCycle()
 
         val pendingEventFiles = FileStorage
@@ -158,39 +122,25 @@ class PolarApp private constructor(
         startResolvingPendingEvents(pendingEventFiles)
     }
 
-    fun bind(
-        activity: Activity?,
-        uri: Uri?,
-        listener: PolarInitListener
-    ) {
-        Logger.d(TAG, "init: uri=$uri")
+    fun bind(uri: Uri?) {
+        Logger.d(TAG, "bind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            isReInitializing = false
             mLastUri = uri
-            mLastActivity = activity
-            mLastListener = listener
-            shared.init()
+            init()
         }
     }
 
-    fun reBind(
-        activity: Activity?,
-        uri: Uri?,
-        listener: PolarInitListener
-    ) {
-        Logger.d(TAG, "reInit: uri=$uri")
+    fun reBind(uri: Uri?) {
+        Logger.d(TAG, "reBind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            isReInitializing = true
             mLastUri = uri
-            mLastActivity = activity
-            mLastListener = listener
-            shared.reInit()
+            reInit()
         }
     }
 
@@ -225,9 +175,7 @@ class PolarApp private constructor(
     fun trackEvent(name: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
             val date = DateTimeUtils.calendarToString(
-                source = Calendar.getInstance().apply {
-                    timeInMillis = mKronosClock.getCurrentTimeMs()
-                },
+                source = Calendar.getInstance(),
                 format = Constants.DateTime.DEFAULT_DATE_FORMAT,
                 timeZone = Constants.DateTime.utcTimeZone,
             )
@@ -242,28 +190,28 @@ class PolarApp private constructor(
             }
 
             override fun onActivityStarted(activity: Activity) {
-                instance?.trackEvent(
+                trackEvent(
                     name = EventModel.Type.APP_OPEN,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityResumed(activity: Activity) {
-                instance?.trackEvent(
+                trackEvent(
                     name = EventModel.Type.APP_ACTIVE,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityPaused(activity: Activity) {
-                instance?.trackEvent(
+                trackEvent(
                     name = EventModel.Type.APP_INACTIVE,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityStopped(activity: Activity) {
-                instance?.trackEvent(
+                trackEvent(
                     name = EventModel.Type.APP_CLOSE,
                     attributes = mapOf()
                 )
@@ -274,7 +222,7 @@ class PolarApp private constructor(
             }
 
             override fun onActivityDestroyed(activity: Activity) {
-                instance?.trackEvent(
+                trackEvent(
                     name = EventModel.Type.APP_TERMINATE,
                     attributes = mapOf()
                 )
@@ -303,44 +251,38 @@ class PolarApp private constructor(
         }
     }
 
-    fun init() {
+    private fun init() {
         CoroutineScope(Dispatchers.IO).launch {
-            handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+            handleOpeningURL(mLastUri)
         }
     }
 
-    fun reInit() {
+    private fun reInit() {
         CoroutineScope(Dispatchers.IO).launch {
-            handleFetchLinkData(activity = mLastActivity, uri = mLastUri)
+            handleOpeningURL(mLastUri)
         }
     }
 
-    private suspend fun handleFetchLinkData(activity: Activity?, uri: Uri?) {
-        if (activity == null) return
+    private suspend fun handleOpeningURL(uri: Uri?) {
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains
         val domain = uri?.host
         if (domain?.endsWith(supportedBaseDomains) != true) {
             Logger.d(TAG, "Invalid domain: $domain")
-            mLastListener?.onInitFinished(null, null)
             return
         }
         val subDomain = domain.replace(supportedBaseDomains, "")
         val path = uri.path?.replace("/", "")
+        val context = application.applicationContext
         val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
-            activity,
-            mKronosClock.getCurrentTimeMs()
+            context,
+            System.currentTimeMillis()
         )
-        val now = Calendar.getInstance().apply {
-            timeInMillis = mKronosClock.getCurrentTimeMs()
-        }
-        val clickTime = DateTimeUtils.calendarToString(
-            now,
+        val clickTime = DateTimeUtils.dateToString(
+            Date(),
             Constants.DateTime.DEFAULT_DATE_FORMAT,
             Constants.DateTime.utcTimeZone,
         )
-        Log.d("TESTING", "handleFetchLinkData: 1")
         if (!uri.path.isNullOrEmpty()) {
-        Log.d("TESTING", "handleFetchLinkData: 2")
             try {
                 val getLinkResponse = linkRepository.fetchLinkData(
                     domain = subDomain,
@@ -367,23 +309,21 @@ class PolarApp private constructor(
                     val request = LinkClickRequest(sdkUsed = true)
                     linkRepository.linkClick(clid, request)
                 }
-
-                mLastListener?.onInitFinished(mLastLink?.data, null)
                 onLinkClickHandler(uri.toString(), mLastLink?.data, null)
             } catch (e: Exception) {
-                mLastListener?.onInitFinished(null, e)
                 onLinkClickHandler(uri.toString(), null, e)
             }
             return
         }
         if (isFirstTimeLaunch && uri.path.isNullOrEmpty()) {
-            val windowMetrics = WindowMetricsCalculator.getOrCreate()
-                .computeCurrentWindowMetrics(activity)
+            val windowMetrics = WindowMetricsCalculator
+                .getOrCreate()
+                .computeCurrentWindowMetrics(context)
             val width = windowMetrics.bounds.width()
             val height = windowMetrics.bounds.height()
 
             // Get density using Resources
-            val metrics = activity.resources?.displayMetrics
+            val metrics = context.resources?.displayMetrics
             val density = metrics?.density
             val densityDpi = metrics?.densityDpi
 

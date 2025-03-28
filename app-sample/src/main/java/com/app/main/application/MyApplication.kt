@@ -41,15 +41,13 @@ class MyApplication : Application() {
         PolarApp.isLoggingEnabled = true
 
         PolarApp.initialize(
-            application = this,
             appId = BuildConfig.POLAR_APP_ID,
             apiKey = BuildConfig.POLAR_API_KEY,
             onLinkClickHandler = { link, data, error ->
                 Log.d(TAG, "\n[DEMO] detect clicked: $link, data: $data, error: $error\n")
             }
         )
-        //TODO: check this
-        //TODO: PolarApp.getInstance...().updateUser(...)
+
         PolarApp.shared.updateUser(
             userID = "e1a3cb25-839e-4deb-95b0-2fb8ebd79401",
             attributes = mapOf(
