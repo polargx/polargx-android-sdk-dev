@@ -1,11 +1,11 @@
 package com.library.polargx
 
-import com.library.polargx.logger.Logger
-import com.library.polargx.model.ApiError
-import com.library.polargx.repository.event.model.EventModel
-import com.library.polargx.repository.user.UserRepository
-import com.library.polargx.repository.user.model.UpdateUserModel
-import com.library.polargx.repository.user.remote.api.UpdateUserRequest
+import com.library.polargx.api.ApiService
+import com.library.polargx.api.update_user.UpdateUserRequest
+import com.library.polargx.helpers.ApiError
+import com.library.polargx.helpers.Logger
+import com.library.polargx.models.UpdateUserModel
+import com.library.polargx.models.TrackEventModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -28,7 +28,7 @@ data class UserSession(
 
     private val trackingEventQueue by lazy { TrackingEventQueue(trackingFileStorage) }
 
-    private val userRepository by inject<UserRepository>()
+    private val apiService by inject<ApiService>()
 
     companion object {
         const val TAG = "UserSession"
@@ -56,7 +56,7 @@ data class UserSession(
             try {
                 val user = UpdateUserModel(organizationUnid, userID, attributes)
                 val request = UpdateUserRequest.from(user)
-                userRepository.updateUser(request)
+                apiService.updateUser(request)
             } catch (e: Exception) {
                 if (e is ApiError) {
                     if (e.code == 403) {
@@ -80,7 +80,7 @@ data class UserSession(
      */
     suspend fun trackEvent(name: String?, date: String?, attributes: Map<String, String>?) {
         trackingEventQueue.push(
-            EventModel(
+            TrackEventModel(
                 organizationUnid = organizationUnid,
                 userID = userID,
                 eventName = name,

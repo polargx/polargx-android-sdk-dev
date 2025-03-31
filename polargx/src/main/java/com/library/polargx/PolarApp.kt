@@ -6,7 +6,9 @@ import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
 import android.os.Bundle
 import androidx.window.layout.WindowMetricsCalculator
-import com.library.polargx.configuration.Configuration
+import com.library.polargx.api.ApiService
+import com.library.polargx.api.track_link.TrackLinkClickRequest
+import com.library.polargx.api.update_link.UpdateLinkClickRequest
 import com.library.polargx.di.polarModule
 import com.library.polargx.extension.getDeviceModel
 import com.library.polargx.extension.getDeviceName
@@ -16,14 +18,10 @@ import com.library.polargx.extension.getManufacturer
 import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.helpers.FileStorage
-import com.library.polargx.logger.Logger
-import com.library.polargx.repository.event.EventRepository
-import com.library.polargx.repository.event.model.EventModel
-import com.library.polargx.repository.link.LinkRepository
-import com.library.polargx.repository.link.model.link.LinkDataModel
-import com.library.polargx.repository.link.remote.api.click.LinkClickRequest
-import com.library.polargx.repository.link.remote.api.track.LinkTrackRequest
-import com.library.polargx.utils.DateTimeUtils
+import com.library.polargx.helpers.Logger
+import com.library.polargx.models.LinkDataModel
+import com.library.polargx.models.TrackEventModel
+import com.library.polargx.helpers.DateTimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,9 +46,8 @@ class PolarApp private constructor(
     val onLinkClickHandler: OnLinkClickHandler
 ) : KoinComponent {
 
-    private val eventRepository: EventRepository by inject()
-    private val linkRepository: LinkRepository by inject()
-    private val application: Application by inject()
+    private val apiService by inject<ApiService>()
+    private val application by inject<Application>()
 
     private var mLastLink: LinkDataModel? = null
 
@@ -191,28 +188,28 @@ class PolarApp private constructor(
 
             override fun onActivityStarted(activity: Activity) {
                 trackEvent(
-                    name = EventModel.Type.APP_OPEN,
+                    name = TrackEventModel.Type.APP_OPEN,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityResumed(activity: Activity) {
                 trackEvent(
-                    name = EventModel.Type.APP_ACTIVE,
+                    name = TrackEventModel.Type.APP_ACTIVE,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityPaused(activity: Activity) {
                 trackEvent(
-                    name = EventModel.Type.APP_INACTIVE,
+                    name = TrackEventModel.Type.APP_INACTIVE,
                     attributes = mapOf()
                 )
             }
 
             override fun onActivityStopped(activity: Activity) {
                 trackEvent(
-                    name = EventModel.Type.APP_CLOSE,
+                    name = TrackEventModel.Type.APP_CLOSE,
                     attributes = mapOf()
                 )
             }
@@ -223,7 +220,7 @@ class PolarApp private constructor(
 
             override fun onActivityDestroyed(activity: Activity) {
                 trackEvent(
-                    name = EventModel.Type.APP_TERMINATE,
+                    name = TrackEventModel.Type.APP_TERMINATE,
                     attributes = mapOf()
                 )
             }
@@ -271,9 +268,9 @@ class PolarApp private constructor(
             return
         }
         val subDomain = domain.replace(supportedBaseDomains, "")
-        val path = uri.path?.replace("/", "")
+        val slug = uri.path?.replace("/", "") ?: ""
         val context = application.applicationContext
-        val isFirstTimeLaunch = eventRepository.isFirstTimeLaunch(
+        val isFirstTimeLaunch = apiService.isFirstTimeLaunch(
             context,
             System.currentTimeMillis()
         )
@@ -284,30 +281,27 @@ class PolarApp private constructor(
         )
         if (!uri.path.isNullOrEmpty()) {
             try {
-                val getLinkResponse = linkRepository.fetchLinkData(
-                    domain = subDomain,
-                    slug = path
-                )
-                mLastLink = getLinkResponse.data?.sdkLinkData?.toExternal()
+                mLastLink = apiService.getLinkData(domain = subDomain, slug = slug)
 
-                val trackRequest = LinkTrackRequest(
+                val trackRequest = TrackLinkClickRequest(
                     domain = subDomain,
-                    slug = path,
-                    trackType = LinkTrackRequest.TrackType.APP_CLICK,
+                    slug = slug,
+                    trackType = TrackLinkClickRequest.TrackType.APP_CLICK,
                     clickTime = clickTime,
-                    fingerprint = LinkTrackRequest.Fingerprint.ANDROID_SDK,
+                    fingerprint = TrackLinkClickRequest.Fingerprint.ANDROID_SDK,
                     deviceData = mapOf(),
                     additionalData = mapOf(),
                 )
                 val clid = uri.getQueryParameter("__clid")
+
                 if (clid.isNullOrEmpty()) {
-                    val trackResponse = linkRepository.track(trackRequest)
-                    val linkClickUnid = trackResponse.data?.linkClick?.unid
-                    val request = LinkClickRequest(sdkUsed = true)
-                    linkRepository.linkClick(linkClickUnid, request)
+                    val linkClick = apiService.trackLinkClick(trackRequest)
+                    val clickUnid = linkClick?.unid
+                    val request = UpdateLinkClickRequest(sdkUsed = true)
+                    apiService.updateLinkClick(clickUnid, request)
                 } else {
-                    val request = LinkClickRequest(sdkUsed = true)
-                    linkRepository.linkClick(clid, request)
+                    val request = UpdateLinkClickRequest(sdkUsed = true)
+                    apiService.updateLinkClick(clid, request)
                 }
                 onLinkClickHandler(uri.toString(), mLastLink?.data, null)
             } catch (e: Exception) {

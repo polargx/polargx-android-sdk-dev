@@ -2,7 +2,7 @@ package com.library.polargx.helpers
 
 import android.content.Context
 import android.util.Log
-import com.library.polargx.configuration.Configuration
+import com.library.polargx.Configuration
 import java.io.File
 
 data class FileStorage(val file: File) {

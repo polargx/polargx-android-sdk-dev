@@ -1,10 +1,10 @@
 package com.library.polargx
 
-import com.library.polargx.logger.Logger
-import com.library.polargx.model.ApiError
-import com.library.polargx.repository.event.EventRepository
-import com.library.polargx.repository.event.model.EventModel
-import com.library.polargx.repository.event.remote.api.EventTrackRequest
+import com.library.polargx.api.ApiService
+import com.library.polargx.helpers.ApiError
+import com.library.polargx.helpers.Logger
+import com.library.polargx.models.TrackEventModel
+import com.library.polargx.api.track_event.TrackEventRequest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
@@ -20,9 +20,9 @@ import javax.net.ssl.SSLHandshakeException
  */
 class TrackingEventQueue(val file: File) : KoinComponent {
 
-    private val eventRepository by inject<EventRepository>()
+    private val apiService by inject<ApiService>()
 
-    var events = mutableListOf<EventModel>()
+    var events = mutableListOf<TrackEventModel>()
         private set
     var isReady = false
         private set
@@ -39,7 +39,7 @@ class TrackingEventQueue(val file: File) : KoinComponent {
     init {
         try {
             val data = file.readText()
-            events = Json.decodeFromString<MutableList<EventModel>>(data)
+            events = Json.decodeFromString<MutableList<TrackEventModel>>(data)
         } catch (e: Exception) {
             events = mutableListOf()
         }
@@ -62,12 +62,12 @@ class TrackingEventQueue(val file: File) : KoinComponent {
     /**
      * Event still pushed to the queue if queue is not ready.
      */
-    fun push(event: EventModel) {
+    fun push(event: TrackEventModel) {
         events.add(event)
         save()
     }
 
-    private fun willPop(): EventModel? {
+    private fun willPop(): TrackEventModel? {
         return events.firstOrNull()
     }
 
@@ -101,8 +101,8 @@ class TrackingEventQueue(val file: File) : KoinComponent {
             val event = willPop() ?: break
 
             try {
-                val request = EventTrackRequest.from(event)
-                eventRepository.trackEvent(request)
+                val request = TrackEventRequest.from(event)
+                apiService.trackEvent(request)
             } catch (e: UnknownHostException) {
                 // Network error: stop sending, keep elements
                 Logger.d(TAG, "Tracking: failed ⛔ + stopped ⛔: $e")

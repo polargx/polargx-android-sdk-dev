@@ -3,27 +3,11 @@ package com.library.polargx.di
 import android.content.Context
 import com.library.polargx.PolarApp
 import com.library.polargx.PolarApp.Companion.TAG
-import com.library.polargx.configuration.Configuration
-import com.library.polargx.logger.Logger
-import com.library.polargx.model.ApiError
-import com.library.polargx.repository.event.EventRepository
-import com.library.polargx.repository.event.EventRepositoryImpl
-import com.library.polargx.repository.event.local.EventLocalDatasource
-import com.library.polargx.repository.event.local.EventLocalDatasourceImpl
-import com.library.polargx.repository.event.remote.EventRemoteDatasource
-import com.library.polargx.repository.event.remote.EventRemoteDatasourceImpl
-import com.library.polargx.repository.link.LinkRepository
-import com.library.polargx.repository.link.LinkRepositoryImpl
-import com.library.polargx.repository.link.local.LinkLocalDatasource
-import com.library.polargx.repository.link.local.LinkLocalDatasourceImpl
-import com.library.polargx.repository.link.remote.LinkRemoteDatasource
-import com.library.polargx.repository.link.remote.LinkRemoteDatasourceImpl
-import com.library.polargx.repository.user.UserRepository
-import com.library.polargx.repository.user.UserRepositoryImpl
-import com.library.polargx.repository.user.local.UserLocalDatasource
-import com.library.polargx.repository.user.local.UserLocalDatasourceImpl
-import com.library.polargx.repository.user.remote.UserRemoteDatasource
-import com.library.polargx.repository.user.remote.UserRemoteDatasourceImpl
+import com.library.polargx.api.ApiService
+import com.library.polargx.api.ApiServiceImpl
+import com.library.polargx.Configuration
+import com.library.polargx.helpers.ApiError
+import com.library.polargx.helpers.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.ClientRequestException
@@ -51,21 +35,12 @@ import org.koin.dsl.module
 import io.ktor.client.plugins.logging.Logger as HttpLogger
 
 val polarModule = module {
-    singleOf(::LinkLocalDatasourceImpl) bind LinkLocalDatasource::class
-    singleOf(::LinkRemoteDatasourceImpl) bind LinkRemoteDatasource::class
-    singleOf(::LinkRepositoryImpl) bind LinkRepository::class
 
-    singleOf(::EventLocalDatasourceImpl) bind EventLocalDatasource::class
-    singleOf(::EventRemoteDatasourceImpl) bind EventRemoteDatasource::class
-    singleOf(::EventRepositoryImpl) bind EventRepository::class
-
-    singleOf(::UserLocalDatasourceImpl) bind UserLocalDatasource::class
-    singleOf(::UserRemoteDatasourceImpl) bind UserRemoteDatasource::class
-    singleOf(::UserRepositoryImpl) bind UserRepository::class
+    singleOf(::ApiServiceImpl) bind ApiService::class
 
     single {
         androidApplication().getSharedPreferences(
-            "PolarGX.file",
+            "polar_gx.file",
             Context.MODE_PRIVATE
         )
     }
