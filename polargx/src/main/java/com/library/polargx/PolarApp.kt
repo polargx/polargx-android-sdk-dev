@@ -22,7 +22,7 @@ import com.library.polargx.helpers.Logger
 import com.library.polargx.models.LinkDataModel
 import com.library.polargx.models.TrackEventModel
 import com.library.polargx.helpers.DateTimeUtils
-import com.library.polargx.listener.LinkInitListener
+import com.library.polargx.listener.PolarInitListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,7 +51,7 @@ class PolarApp private constructor(
     private val application by inject<Application>()
 
     private var mLastLink: LinkDataModel? = null
-    private var mLastListener: LinkInitListener? = null
+    private var mLastListener: PolarInitListener? = null
 
     /**
      * The storage location to save user data and events (belong to SDK).
@@ -121,7 +121,7 @@ class PolarApp private constructor(
         startResolvingPendingEvents(pendingEventFiles)
     }
 
-    fun bind(uri: Uri?, listener: LinkInitListener?) {
+    fun bind(uri: Uri?, listener: PolarInitListener?) {
         Logger.d(TAG, "bind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
@@ -133,7 +133,7 @@ class PolarApp private constructor(
         }
     }
 
-    fun reBind(uri: Uri?, listener: LinkInitListener?) {
+    fun reBind(uri: Uri?, listener: PolarInitListener?) {
         Logger.d(TAG, "reBind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
