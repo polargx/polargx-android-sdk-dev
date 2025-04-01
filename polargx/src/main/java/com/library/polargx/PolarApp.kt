@@ -22,6 +22,7 @@ import com.library.polargx.helpers.Logger
 import com.library.polargx.models.LinkDataModel
 import com.library.polargx.models.TrackEventModel
 import com.library.polargx.helpers.DateTimeUtils
+import com.library.polargx.listener.LinkInitListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,6 +51,7 @@ class PolarApp private constructor(
     private val application by inject<Application>()
 
     private var mLastLink: LinkDataModel? = null
+    private var mLastListener: LinkInitListener? = null
 
     /**
      * The storage location to save user data and events (belong to SDK).
@@ -119,24 +121,26 @@ class PolarApp private constructor(
         startResolvingPendingEvents(pendingEventFiles)
     }
 
-    fun bind(uri: Uri?) {
+    fun bind(uri: Uri?, listener: LinkInitListener?) {
         Logger.d(TAG, "bind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastUri = uri
+            mLastListener = listener
             init()
         }
     }
 
-    fun reBind(uri: Uri?) {
+    fun reBind(uri: Uri?, listener: LinkInitListener?) {
         Logger.d(TAG, "reBind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastUri = uri
+            mLastListener = listener
             reInit()
         }
     }
@@ -264,7 +268,7 @@ class PolarApp private constructor(
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains
         val domain = uri?.host
         if (domain?.endsWith(supportedBaseDomains) != true) {
-            Logger.d(TAG, "Invalid domain: $domain")
+            mLastListener?.onInitFinished(null, null)
             return
         }
         val subDomain = domain.replace(supportedBaseDomains, "")
@@ -304,8 +308,10 @@ class PolarApp private constructor(
                     apiService.updateLinkClick(clid, request)
                 }
                 onLinkClickHandler(uri.toString(), mLastLink?.data, null)
+                mLastListener?.onInitFinished(mLastLink?.data, null)
             } catch (e: Exception) {
                 onLinkClickHandler(uri.toString(), null, e)
+                mLastListener?.onInitFinished(null, e)
             }
             return
         }
