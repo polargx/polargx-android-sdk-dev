@@ -21,9 +21,5 @@ class ProdEnvConfiguration(
 object Configuration {
     const val Brand = "Polar"
 
-    val Env: EnvConfiguration = if (PolarApp.isDevelopmentEnabled) {
-        DevEnvConfiguration()
-    } else {
-        ProdEnvConfiguration()
-    }
+    var Env: EnvConfiguration = ProdEnvConfiguration()
 }

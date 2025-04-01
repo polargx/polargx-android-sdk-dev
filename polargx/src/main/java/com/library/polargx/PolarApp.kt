@@ -41,17 +41,20 @@ import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
 
-class PolarApp private constructor(
+private class InternalPolarApp constructor(
     val appId: String,
-    val apiKey: String,
+    override val apiKey: String,
     val onLinkClickHandler: OnLinkClickHandler
-) : KoinComponent {
+) : PolarApp() {
 
     private val apiService by inject<ApiService>()
     private val application by inject<Application>()
 
     private var mLastLink: LinkDataModel? = null
     private var mLastListener: PolarInitListener? = null
+
+    private var mGetLinkJob: Job? = null
+    private var mLastUri: Uri? = null
 
     /**
      * The storage location to save user data and events (belong to SDK).
@@ -63,44 +66,11 @@ class PolarApp private constructor(
     private var currentUserSession: UserSession? = null
     private var otherUserSessions = mutableListOf<UserSession>()
 
-    companion object {
-        const val TAG = ">>>Polar"
-
-        var isDevelopmentEnabled = false
-        var isLoggingEnabled = false
-
-        private var mGetLinkJob: Job? = null
-        private var mLastUri: Uri? = null
-
-        @Volatile
-        private var _shared: PolarApp? = null
-
-        val shared: PolarApp
-            get() = _shared ?: synchronized(this) { // Ensure thread-safe
-                _shared ?: error("PolarApp hasn't been initialized!")
-            }
-
-        fun initialize(
-            appId: String,
-            apiKey: String,
-            onLinkClickHandler: OnLinkClickHandler
-        ) {
-            _shared = PolarApp(
-                appId = appId,
-                apiKey = apiKey,
-                onLinkClickHandler = onLinkClickHandler
-            )
-
-            shared.startInject()
-            shared.startInitializingApp()
-        }
-    }
-
     private fun isKoinStarted(): Boolean {
         return GlobalContext.getOrNull() != null
     }
 
-    private fun startInject() {
+    fun startInject() {
         if (isKoinStarted()) {
             loadKoinModules(polarModule)
             return
@@ -112,7 +82,7 @@ class PolarApp private constructor(
         }
     }
 
-    private fun startInitializingApp() {
+    fun startInitializingApp() {
         startTrackingAppLifeCycle()
 
         val pendingEventFiles = FileStorage
@@ -121,7 +91,7 @@ class PolarApp private constructor(
         startResolvingPendingEvents(pendingEventFiles)
     }
 
-    fun bind(uri: Uri?, listener: PolarInitListener?) {
+    override fun bind(uri: Uri?, listener: PolarInitListener?) {
         Logger.d(TAG, "bind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
@@ -133,7 +103,7 @@ class PolarApp private constructor(
         }
     }
 
-    fun reBind(uri: Uri?, listener: PolarInitListener?) {
+    override fun reBind(uri: Uri?, listener: PolarInitListener?) {
         Logger.d(TAG, "reBind: uri: $uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
@@ -150,7 +120,7 @@ class PolarApp private constructor(
      * - Create current user session if needed
      * - Backup user session into the otherUserSessions to keep running for sending events
      */
-    fun updateUser(userID: String?, attributes: Map<String, String>?) {
+    override fun updateUser(userID: String?, attributes: Map<String, String>?) {
         currentUserSession?.let { userSession ->
             if (userSession.userID != userID) {
                 currentUserSession = null
@@ -173,7 +143,7 @@ class PolarApp private constructor(
         }
     }
 
-    fun trackEvent(name: String?, attributes: Map<String, String>?) {
+    override fun trackEvent(name: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
             val date = DateTimeUtils.calendarToString(
                 source = Calendar.getInstance(),
@@ -341,6 +311,54 @@ class PolarApp private constructor(
                         "\nwindow.density=${density}" +
                         "\nwindow.densityDpi=${densityDpi}"
             )
+        }
+    }
+}
+
+open class PolarApp: KoinComponent {
+    open val apiKey = "invalid"
+
+    open fun bind(uri: Uri?, listener: PolarInitListener?) {}
+    open fun reBind(uri: Uri?, listener: PolarInitListener?) {}
+    open fun updateUser(userID: String?, attributes: Map<String, String>?) {}
+    open fun trackEvent(name: String?, attributes: Map<String, String>?) {}
+
+    companion object {
+        const val TAG = ">>>Polar"
+
+        var isLoggingEnabled = false
+
+        @Volatile
+        private var _shared: PolarApp? = null
+
+        val shared: PolarApp
+            get() = _shared ?: synchronized(this) { // Ensure thread-safe
+                _shared ?: run {
+                    Logger.e(TAG, "Polar App hasn't initialized!")
+                    PolarApp()
+                }
+            }
+
+        fun initialize(
+            appId: String,
+            apiKey: String,
+            onLinkClickHandler: OnLinkClickHandler
+        ) {
+            var correctedApiKey = apiKey
+            if (correctedApiKey.startsWith("dev_")) {
+                correctedApiKey = correctedApiKey.substring(4)
+                Configuration.Env = DevEnvConfiguration()
+            }
+
+            val internalApp = InternalPolarApp(
+                appId = appId,
+                apiKey = correctedApiKey,
+                onLinkClickHandler = onLinkClickHandler
+            )
+            _shared = internalApp
+
+            internalApp.startInject()
+            internalApp.startInitializingApp()
         }
     }
 }
