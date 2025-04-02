@@ -1,10 +1,10 @@
 package com.library.polargx
 
-import android.app.Activity
 import android.app.Application
-import android.app.Application.ActivityLifecycleCallbacks
 import android.net.Uri
-import android.os.Bundle
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.window.layout.WindowMetricsCalculator
 import com.library.polargx.api.ApiService
 import com.library.polargx.api.track_link.TrackLinkClickRequest
@@ -17,15 +17,16 @@ import com.library.polargx.extension.getIP6Address
 import com.library.polargx.extension.getManufacturer
 import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
+import com.library.polargx.helpers.DateTimeUtils
 import com.library.polargx.helpers.FileStorage
 import com.library.polargx.helpers.Logger
+import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.models.LinkDataModel
 import com.library.polargx.models.TrackEventModel
-import com.library.polargx.helpers.DateTimeUtils
-import com.library.polargx.listener.PolarInitListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -35,20 +36,22 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import java.time.Instant
-import java.util.Calendar
 import java.util.Date
 import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
+typealias UntrackedEvent = Triple<String?, String?, Map<String, String>?>
 
 private class InternalPolarApp constructor(
     val appId: String,
-    override val apiKey: String,
+    override var apiKey: String,
     val onLinkClickHandler: OnLinkClickHandler
-) : PolarApp() {
+) : PolarApp(), KoinComponent {
 
     private val apiService by inject<ApiService>()
     private val application by inject<Application>()
+
+    private val maxCapacity = 100
 
     private var mLastLink: LinkDataModel? = null
     private var mLastListener: PolarInitListener? = null
@@ -64,7 +67,20 @@ private class InternalPolarApp constructor(
     }
 
     private var currentUserSession: UserSession? = null
-    private var otherUserSessions = mutableListOf<UserSession>()
+    private val otherUserSessions = mutableListOf<UserSession>()
+    private var pendingEvents = arrayListOf<UntrackedEvent>()
+
+    init {
+        if (apiKey.startsWith("dev_")) {
+            apiKey = apiKey.substring(4)
+            Configuration.Env = DevEnvConfiguration()
+        }
+
+        pendingEvents.ensureCapacity(maxCapacity)
+
+        startInject()
+        startInitializingApp()
+    }
 
     private fun isKoinStarted(): Boolean {
         return GlobalContext.getOrNull() != null
@@ -128,71 +144,85 @@ private class InternalPolarApp constructor(
             }
         }
 
+        var events = mutableListOf<UntrackedEvent>()
         if (currentUserSession == null && userID != null) {
             val name = "events_${Instant.now().epochSecond}_${UUID.randomUUID()}.json"
             val file = appDirectory.file(name)
             Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
+
+            events = pendingEvents
+            pendingEvents = arrayListOf()
 
             currentUserSession = UserSession(
                 organizationUnid = appId,
                 userID = userID,
                 trackingFileStorage = file
             )
+        }
 
-            currentUserSession?.setAttributes(attributes ?: emptyMap())
+        CoroutineScope(Dispatchers.IO).launch {
+            listOf(
+                async { currentUserSession?.trackEvents(events) },
+                async { currentUserSession?.setAttributes(attributes ?: emptyMap()) }
+            )
         }
     }
 
     override fun trackEvent(name: String?, attributes: Map<String, String>?) {
         CoroutineScope(Dispatchers.Main).launch {
-            val date = DateTimeUtils.calendarToString(
-                source = Calendar.getInstance(),
+            val date = DateTimeUtils.dateToString(
+                source = Date(),
                 format = Constants.DateTime.DEFAULT_DATE_FORMAT,
                 timeZone = Constants.DateTime.utcTimeZone,
             )
-            currentUserSession?.trackEvent(name, date, attributes)
+            val userSession = currentUserSession
+            if (userSession != null) {
+                val events = listOf(UntrackedEvent(name, date, attributes))
+                userSession.trackEvents(events)
+            } else {
+                if (pendingEvents.size == maxCapacity) {
+                    pendingEvents.removeAt(0)
+                }
+                pendingEvents.add(UntrackedEvent(name, date, attributes))
+            }
         }
     }
 
     private fun startTrackingAppLifeCycle() {
-        application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onCreate(owner: LifecycleOwner) {
 
             }
 
-            override fun onActivityStarted(activity: Activity) {
+            override fun onStart(owner: LifecycleOwner) {
                 trackEvent(
                     name = TrackEventModel.Type.APP_OPEN,
                     attributes = mapOf()
                 )
             }
 
-            override fun onActivityResumed(activity: Activity) {
+            override fun onResume(owner: LifecycleOwner) {
                 trackEvent(
                     name = TrackEventModel.Type.APP_ACTIVE,
                     attributes = mapOf()
                 )
             }
 
-            override fun onActivityPaused(activity: Activity) {
+            override fun onPause(owner: LifecycleOwner) {
                 trackEvent(
                     name = TrackEventModel.Type.APP_INACTIVE,
                     attributes = mapOf()
                 )
             }
 
-            override fun onActivityStopped(activity: Activity) {
+            override fun onStop(owner: LifecycleOwner) {
                 trackEvent(
                     name = TrackEventModel.Type.APP_CLOSE,
                     attributes = mapOf()
                 )
             }
 
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-
-            }
-
-            override fun onActivityDestroyed(activity: Activity) {
+            override fun onDestroy(owner: LifecycleOwner) {
                 trackEvent(
                     name = TrackEventModel.Type.APP_TERMINATE,
                     attributes = mapOf()
@@ -315,8 +345,8 @@ private class InternalPolarApp constructor(
     }
 }
 
-open class PolarApp: KoinComponent {
-    open val apiKey = "invalid"
+open class PolarApp {
+    open var apiKey = "invalid"
 
     open fun bind(uri: Uri?, listener: PolarInitListener?) {}
     open fun reBind(uri: Uri?, listener: PolarInitListener?) {}
@@ -344,21 +374,11 @@ open class PolarApp: KoinComponent {
             apiKey: String,
             onLinkClickHandler: OnLinkClickHandler
         ) {
-            var correctedApiKey = apiKey
-            if (correctedApiKey.startsWith("dev_")) {
-                correctedApiKey = correctedApiKey.substring(4)
-                Configuration.Env = DevEnvConfiguration()
-            }
-
-            val internalApp = InternalPolarApp(
+            _shared = InternalPolarApp(
                 appId = appId,
-                apiKey = correctedApiKey,
+                apiKey = apiKey,
                 onLinkClickHandler = onLinkClickHandler
             )
-            _shared = internalApp
-
-            internalApp.startInject()
-            internalApp.startInitializingApp()
         }
     }
 }

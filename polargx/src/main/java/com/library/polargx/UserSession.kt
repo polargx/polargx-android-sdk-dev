@@ -6,10 +6,7 @@ import com.library.polargx.helpers.ApiError
 import com.library.polargx.helpers.Logger
 import com.library.polargx.models.UpdateUserModel
 import com.library.polargx.models.TrackEventModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
@@ -37,11 +34,9 @@ data class UserSession(
     /**
      * Keep all user attributes for next sending. I don't make sure server supports to merging existing user attributes and the new attributes.
      */
-    fun setAttributes(newAttributes: Map<String, String>) {
-        CoroutineScope(Dispatchers.IO).launch {
-            attributes += newAttributes
-            startToUpdateUser()
-        }
+    suspend fun setAttributes(newAttributes: Map<String, String>) {
+        attributes += newAttributes
+        startToUpdateUser()
     }
 
     /**
@@ -78,16 +73,19 @@ data class UserSession(
     /**
      * Track event for user.
      */
-    suspend fun trackEvent(name: String?, date: String?, attributes: Map<String, String>?) {
-        trackingEventQueue.push(
-            TrackEventModel(
-                organizationUnid = organizationUnid,
-                userID = userID,
-                eventName = name,
-                eventTime = date,
-                data = attributes
+    suspend fun trackEvents(events: List<UntrackedEvent>) {
+        events.map { event ->
+            val (name, date, attributes) = event
+            trackingEventQueue.push(
+                TrackEventModel(
+                    organizationUnid = organizationUnid,
+                    userID = userID,
+                    eventName = name,
+                    eventTime = date,
+                    data = attributes
+                )
             )
-        )
+        }
         trackingEventQueue.sendEventsIfNeeded()
     }
 }
