@@ -31,7 +31,7 @@ data class UserSession(
     private val apiService by inject<ApiService>()
 
     companion object {
-        const val TAG = "UserSession"
+        const val TAG = ">>>Polar"
     }
 
     /**

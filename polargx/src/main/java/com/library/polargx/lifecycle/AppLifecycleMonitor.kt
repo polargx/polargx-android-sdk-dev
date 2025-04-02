@@ -14,7 +14,7 @@ class AppLifecycleMonitor(
 ) : Application.ActivityLifecycleCallbacks {
 
     companion object {
-        const val TAG = ">>>AppLifecycleMonitor"
+        const val TAG = ">>>Polar"
     }
 
     val mCreatedActivityList: MutableList<Activity> by lazy { mutableListOf() }

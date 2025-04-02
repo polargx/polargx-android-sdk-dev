@@ -30,7 +30,7 @@ class TrackingEventQueue(val file: File) : KoinComponent {
         private set
 
     companion object {
-        const val TAG = "TrackingEventQueue"
+        const val TAG = ">>>Polar"
     }
 
     /**
