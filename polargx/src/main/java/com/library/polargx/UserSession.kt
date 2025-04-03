@@ -1,5 +1,6 @@
 package com.library.polargx
 
+import android.util.Log
 import com.library.polargx.api.ApiService
 import com.library.polargx.api.update_user.UpdateUserRequest
 import com.library.polargx.helpers.ApiError
@@ -21,7 +22,7 @@ data class UserSession(
     val userID: String,
     val trackingFileStorage: File
 ) : KoinComponent {
-    private var attributes = mapOf<String, String>()
+    private var attributes = mapOf<String, Any>()
 
     private val trackingEventQueue by lazy { TrackingEventQueue(trackingFileStorage) }
 
@@ -34,7 +35,7 @@ data class UserSession(
     /**
      * Keep all user attributes for next sending. I don't make sure server supports to merging existing user attributes and the new attributes.
      */
-    suspend fun setAttributes(newAttributes: Map<String, String>) {
+    suspend fun setAttributes(newAttributes: Map<String, Any>) {
         attributes += newAttributes
         startToUpdateUser()
     }

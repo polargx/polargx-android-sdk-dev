@@ -6,9 +6,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UpdateUserModel(
     @SerialName("organizationUnid")
-    val organizationUnid: String? = null,
+    val organizationUnid: String?,
     @SerialName("userID")
-    val userID: String? = null,
+    val userID: String?,
     @SerialName("data")
-    val data: Map<String, String>? = null
-)
+    val data: MapModel?
+) {
+
+    constructor(
+        organizationUnid: String?,
+        userID: String?,
+        data: Map<String, Any>?
+    ) : this(organizationUnid, userID, MapModel(data))
+}

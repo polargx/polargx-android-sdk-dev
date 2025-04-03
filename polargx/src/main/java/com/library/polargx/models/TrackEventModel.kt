@@ -1,25 +1,30 @@
 package com.library.polargx.models
 
-import android.os.Parcelable
 import androidx.annotation.StringDef
-import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Parcelize
 @Serializable
 data class TrackEventModel(
     @SerialName("organizationUnid")
-    val organizationUnid: String? = null,
+    val organizationUnid: String?,
     @SerialName("userID")
-    val userID: String? = null,
+    val userID: String?,
     @SerialName("eventName")
-    val eventName: String? = null,
+    val eventName: String?,
     @SerialName("eventTime")
-    val eventTime: String? = null,
+    val eventTime: String?,
     @SerialName("data")
-    val data: Map<String, String>? = null
-) : Parcelable {
+    val data: MapModel?
+) {
+
+    constructor(
+        organizationUnid: String?,
+        userID: String?,
+        eventName: String?,
+        eventTime: String?,
+        data: Map<String, Any>?
+    ) : this(organizationUnid, userID, eventName, eventTime, MapModel(data))
 
     @Retention(value = AnnotationRetention.SOURCE)
     @StringDef(

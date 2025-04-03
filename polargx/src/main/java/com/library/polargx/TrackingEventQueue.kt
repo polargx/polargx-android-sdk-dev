@@ -1,5 +1,6 @@
 package com.library.polargx
 
+import android.util.Log
 import com.library.polargx.api.ApiService
 import com.library.polargx.helpers.ApiError
 import com.library.polargx.helpers.Logger

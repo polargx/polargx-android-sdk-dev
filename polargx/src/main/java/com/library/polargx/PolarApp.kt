@@ -2,6 +2,7 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -22,6 +23,7 @@ import com.library.polargx.helpers.FileStorage
 import com.library.polargx.helpers.Logger
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.models.LinkDataModel
+import com.library.polargx.models.MapModel
 import com.library.polargx.models.TrackEventModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +41,7 @@ import java.util.Date
 import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
-typealias UntrackedEvent = Triple<String?, String?, Map<String, String>?>
+typealias UntrackedEvent = Triple<String, String, Map<String, Any>>
 
 private class InternalPolarApp(
     val appId: String,
@@ -132,7 +134,7 @@ private class InternalPolarApp(
      * - Create current user session if needed
      * - Backup user session into the otherUserSessions to keep running for sending events
      */
-    override fun updateUser(userID: String?, attributes: Map<String, String>?) {
+    override fun updateUser(userID: String?, attributes: Map<String, Any>?) {
         currentUserSession?.let { userSession ->
             if (userSession.userID != userID) {
                 currentUserSession = null
@@ -164,7 +166,7 @@ private class InternalPolarApp(
         }
     }
 
-    override fun trackEvent(name: String?, attributes: Map<String, String>?) {
+    override fun trackEvent(name: String, attributes: Map<String, Any>) {
         CoroutineScope(Dispatchers.Main).launch {
             val date = DateTimeUtils.dateToString(
                 source = Date(),
@@ -291,8 +293,8 @@ private class InternalPolarApp(
                     val request = UpdateLinkClickRequest(sdkUsed = true)
                     apiService.updateLinkClick(clid, request)
                 }
-                onLinkClickHandler(uri.toString(), mLastLink?.data, null)
-                mLastListener?.onInitFinished(mLastLink?.data, null)
+                onLinkClickHandler(uri.toString(), mLastLink?.data?.content, null)
+                mLastListener?.onInitFinished(mLastLink?.data?.content, null)
             } catch (e: Exception) {
                 onLinkClickHandler(uri.toString(), null, e)
                 mLastListener?.onInitFinished(null, e)
@@ -334,8 +336,8 @@ open class PolarApp {
 
     open fun bind(uri: Uri?, listener: PolarInitListener?) {}
     open fun reBind(uri: Uri?, listener: PolarInitListener?) {}
-    open fun updateUser(userID: String?, attributes: Map<String, String>?) {}
-    open fun trackEvent(name: String?, attributes: Map<String, String>?) {}
+    open fun updateUser(userID: String?, attributes: Map<String, Any>?) {}
+    open fun trackEvent(name: String, attributes: Map<String, Any>) {}
 
     companion object {
         const val TAG = ">>>Polar"
@@ -363,6 +365,22 @@ open class PolarApp {
                 apiKey = apiKey,
                 onLinkClickHandler = onLinkClickHandler
             )
+
+            val jsonString = """
+            {
+                "name": "John",
+                "age": 30,
+                "isAdmin": true,
+                "scores": [100, 95, 90],
+                "address": {
+                    "city": "New York",
+                    "zipcode": "10001"
+                }
+            }
+            """
+
+//            val model = MapModel.fromJson(jsonString)
+//            Log.d("TESTING", "initialize: ${model.content}")
         }
     }
 }

@@ -34,12 +34,12 @@ object DateTimeUtils {
     }
 
     fun calendarToString(
-        source: Calendar?,
+        source: Calendar,
         format: String = Constants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
-    ): String? {
-        return dateToString(source?.time, format, timeZone, locale)
+    ): String {
+        return dateToString(source.time, format, timeZone, locale)
     }
 
     fun stringToDate(
@@ -59,18 +59,13 @@ object DateTimeUtils {
     }
 
     fun dateToString(
-        source: Date?,
+        source: Date,
         format: String = Constants.DateTime.DEFAULT_DATE_FORMAT,
         timeZone: TimeZone? = TimeZone.getDefault(),
         locale: Locale = Locale.US
-    ): String? {
-        if (source == null) return null
+    ): String {
         val df = SimpleDateFormat(format, locale)
         df.timeZone = timeZone ?: TimeZone.getDefault()
-        return try {
-            df.format(source)
-        } catch (e: ParseException) {
-            null
-        }
+        return df.format(source)
     }
 }

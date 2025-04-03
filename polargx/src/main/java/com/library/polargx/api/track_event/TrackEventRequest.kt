@@ -1,5 +1,6 @@
 package com.library.polargx.api.track_event
 
+import com.library.polargx.models.MapModel
 import com.library.polargx.models.TrackEventModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -15,7 +16,7 @@ data class TrackEventRequest(
     @SerialName("eventTime")
     val eventTime: String?,
     @SerialName("data")
-    val data: Map<String, String>?
+    val data: MapModel?
 ) {
 
     companion object {

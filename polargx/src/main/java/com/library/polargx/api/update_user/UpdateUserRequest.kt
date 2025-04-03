@@ -1,5 +1,6 @@
 package com.library.polargx.api.update_user
 
+import com.library.polargx.models.MapModel
 import com.library.polargx.models.UpdateUserModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -11,7 +12,7 @@ data class UpdateUserRequest(
     @SerialName("userID")
     val userID: String?,
     @SerialName("data")
-    val data: Map<String, String>?
+    val data: MapModel?
 ) {
 
     companion object {
