@@ -35,14 +35,13 @@ import org.koin.core.component.inject
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
-import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
 typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
 typealias UntrackedEvent = Triple<String?, String?, Map<String, String>?>
 
-private class InternalPolarApp constructor(
+private class InternalPolarApp(
     val appId: String,
     override var apiKey: String,
     val onLinkClickHandler: OnLinkClickHandler
@@ -57,7 +56,6 @@ private class InternalPolarApp constructor(
     private var mLastListener: PolarInitListener? = null
 
     private var mGetLinkJob: Job? = null
-    private var mLastUri: Uri? = null
 
     /**
      * The storage location to save user data and events (belong to SDK).
@@ -108,26 +106,24 @@ private class InternalPolarApp constructor(
     }
 
     override fun bind(uri: Uri?, listener: PolarInitListener?) {
-        Logger.d(TAG, "bind: uri: $uri")
+        Logger.d(TAG, "bind: uri=$uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            mLastUri = uri
             mLastListener = listener
-            init()
+            handleOpeningURL(uri)
         }
     }
 
     override fun reBind(uri: Uri?, listener: PolarInitListener?) {
-        Logger.d(TAG, "reBind: uri: $uri")
+        Logger.d(TAG, "reBind: uri=$uri")
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
-            mLastUri = uri
             mLastListener = listener
-            reInit()
+            handleOpeningURL(uri)
         }
     }
 
@@ -146,7 +142,7 @@ private class InternalPolarApp constructor(
 
         var events = mutableListOf<UntrackedEvent>()
         if (currentUserSession == null && userID != null) {
-            val name = "events_${Instant.now().epochSecond}_${UUID.randomUUID()}.json"
+            val name = "events_${Date().time}_${UUID.randomUUID()}.json"
             val file = appDirectory.file(name)
             Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
 
@@ -249,18 +245,6 @@ private class InternalPolarApp constructor(
                     FileStorage.remove(pendingEventFile, appDirectory)
                 }
             }
-        }
-    }
-
-    private fun init() {
-        CoroutineScope(Dispatchers.IO).launch {
-            handleOpeningURL(mLastUri)
-        }
-    }
-
-    private fun reInit() {
-        CoroutineScope(Dispatchers.IO).launch {
-            handleOpeningURL(mLastUri)
         }
     }
 
