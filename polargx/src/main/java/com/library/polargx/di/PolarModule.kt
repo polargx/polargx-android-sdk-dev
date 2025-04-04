@@ -69,7 +69,7 @@ val polarModule = module {
             install(Logging) {
                 logger = object : HttpLogger {
                     override fun log(message: String) {
-                        Logger.i("HttpClient", message)
+                        Logger.i(TAG, message)
                     }
                 }
                 level = LogLevel.ALL
