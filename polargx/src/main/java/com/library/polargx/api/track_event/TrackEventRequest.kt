@@ -1,6 +1,6 @@
 package com.library.polargx.api.track_event
 
-import com.library.polargx.models.MapModel
+import MapModel
 import com.library.polargx.models.TrackEventModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

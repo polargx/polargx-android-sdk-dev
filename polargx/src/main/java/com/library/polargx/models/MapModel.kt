@@ -1,105 +1,106 @@
-package com.library.polargx.models
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import kotlinx.serialization.encoding.*
+import kotlinx.serialization.descriptors.*
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.PolymorphicSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-import kotlinx.serialization.descriptors.mapSerialDescriptor
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonEncoder
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.double
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
-import kotlinx.serialization.modules.SerializersModule
+/**
+ * Lớp dữ liệu tương đương với DictionaryModel trong Swift,
+ * chứa một Map<String, Any?> để lưu trữ dữ liệu động.
+ * Sử dụng một Serializer tùy chỉnh (DictionaryModelSerializer)
+ * để xử lý việc mã hóa và giải mã JSON.
+ */
+@Serializable(with = DictionaryModelSerializer::class)
+data class MapModel(val content: Map<String, Any?>?) // Sử dụng Any? để có thể chứa null
 
-@Serializable
-data class MapModel(val content: Map<String, @Contextual Any>?) {
+/**
+ * Serializer tùy chỉnh cho DictionaryModel.
+ * Nó xử lý việc chuyển đổi giữa DictionaryModel và cấu trúc JsonObject.
+ */
+object DictionaryModelSerializer : KSerializer<MapModel> {
 
-    // Custom serializer for DynamicMap
-    class DynamicMapSerializer : KSerializer<MapModel> {
-        override val descriptor = buildClassSerialDescriptor("DynamicMap") {
-            mapSerialDescriptor(
-                String.serializer().descriptor,
-                PolymorphicSerializer(Any::class).descriptor
-            )
-        }
+    // Descriptor mô tả cấu trúc dữ liệu khi serialize, tương tự như một Map hoặc JsonObject.
+    @OptIn(InternalSerializationApi::class)
+    override val descriptor: SerialDescriptor =
+        buildSerialDescriptor("DictionaryModel", StructureKind.MAP)
 
-        override fun serialize(encoder: Encoder, value: MapModel) {
-            val jsonEncoder =
-                encoder as? JsonEncoder ?: throw SerializationException("Expected JsonEncoder")
-            jsonEncoder.encodeJsonElement(serializeContent(value.content ?: return))
-        }
+    override fun serialize(encoder: Encoder, value: MapModel) {
+        // Chỉ hoạt động với định dạng JSON
+        val jsonEncoder = encoder as? JsonEncoder
+            ?: throw SerializationException("This serializer can only be used with JSON format")
 
-        override fun deserialize(decoder: Decoder): MapModel {
-            val jsonDecoder =
-                decoder as? JsonDecoder ?: throw SerializationException("Expected JsonDecoder")
-            val jsonElement = jsonDecoder.decodeJsonElement()
-            return MapModel(deserializeContent(jsonElement.jsonObject))
-        }
-
-        private fun serializeContent(content: Map<String, Any>): JsonObject {
-            return buildJsonObject {
-                content.forEach { (key, value) ->
-                    when (value) {
-                        is Boolean -> put(key, value)
-                        is Int -> put(key, value)
-                        is Double -> put(key, value)
-                        is String -> put(key, value)
-                        is Map<*, *> -> put(key, serializeContent(value as Map<String, Any>))
-                        is List<*> -> put(
-                            key,
-                            JsonArray(value.map { JsonPrimitive(it.toString()) })
-                        )
-
-                        else -> put(key, JsonPrimitive(value.toString()))
-                    }
-                }
+        // Xây dựng một JsonObject từ nội dung của DictionaryModel
+        val jsonObject = buildJsonObject {
+            value.content?.forEach { (key, mapValue) ->
+                // Chuyển đổi từng giá trị trong Map thành JsonElement tương ứng
+                put(key, anyToJsonElement(mapValue))
             }
         }
-
-        private fun deserializeContent(jsonObject: JsonObject): Map<String, Any> {
-            return jsonObject.mapValues { (_, value) ->
-                when (value) {
-                    is JsonPrimitive -> when {
-                        value.isString -> value.content
-                        value.booleanOrNull != null -> value.boolean
-                        value.intOrNull != null -> value.int
-                        value.doubleOrNull != null -> value.double
-                        else -> value.content
-                    }
-
-                    is JsonObject -> deserializeContent(value)
-                    is JsonArray -> value.map { it.jsonPrimitive.content }
-                    else -> value.toString()
-                }
-            }
-        }
+        // Mã hóa JsonObject đã tạo
+        jsonEncoder.encodeJsonElement(jsonObject)
     }
 
-    companion object {
-        private val json = Json {
-            serializersModule =
-                SerializersModule { contextual(MapModel::class, DynamicMapSerializer()) }
-        }
+    override fun deserialize(decoder: Decoder): MapModel {
+        // Chỉ hoạt động với định dạng JSON
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: throw SerializationException("This serializer can only be used with JSON format")
 
-        fun fromJson(jsonString: String): MapModel = json.decodeFromString(jsonString)
-        fun toJson(model: MapModel): String = json.encodeToString(model)
+        // Giải mã đầu vào thành một JsonObject
+        val jsonObject = jsonDecoder.decodeJsonElement().jsonObject
+
+        // Tạo một Map tạm thời để lưu kết quả giải mã
+        val resultMap = mutableMapOf<String, Any?>()
+        jsonObject.forEach { (key, jsonElement) ->
+            // Chuyển đổi từng JsonElement trong JsonObject thành kiểu Kotlin tương ứng
+            resultMap[key] = jsonElementToAny(jsonElement)
+        }
+        // Trả về một DictionaryModel mới với Map đã giải mã
+        return MapModel(resultMap)
+    }
+
+    /**
+     * Hàm trợ giúp để chuyển đổi một giá trị Kotlin bất kỳ (Any?) thành JsonElement.
+     */
+    private fun anyToJsonElement(value: Any?): JsonElement = when (value) {
+        null -> JsonNull // Kotlin null -> JsonNull
+        is String -> JsonPrimitive(value) // String -> JsonPrimitive(String)
+        is Boolean -> JsonPrimitive(value) // Boolean -> JsonPrimitive(Boolean)
+        is Number -> JsonPrimitive(value) // Int, Long, Double, Float,... -> JsonPrimitive(Number)
+        is Map<*, *> -> buildJsonObject { // Map -> JsonObject
+            value.forEach { (mapKey, mapValue) ->
+                // Key của Map phải là String để tương thích với JSON
+                if (mapKey is String) {
+                    put(mapKey, anyToJsonElement(mapValue)) // Đệ quy cho giá trị
+                } else {
+                    throw SerializationException("Map keys must be Strings for JSON serialization. Found key: $mapKey of type ${mapKey?.let { it::class }}")
+                }
+            }
+        }
+        is List<*> -> buildJsonArray { // List -> JsonArray
+            value.forEach { listItem ->
+                add(anyToJsonElement(listItem)) // Đệ quy cho từng phần tử
+            }
+        }
+        // Có thể thêm các trường hợp khác nếu cần xử lý các kiểu tùy chỉnh
+        else -> throw SerializationException("Cannot serialize type ${value::class}: $value")
+    }
+
+    /**
+     * Hàm trợ giúp để chuyển đổi một JsonElement thành giá trị Kotlin Any?.
+     */
+    private fun jsonElementToAny(element: JsonElement): Any? = when (element) {
+        is JsonNull -> null // JsonNull -> Kotlin null
+        is JsonPrimitive -> when { // JsonPrimitive -> String, Boolean, Number
+            element.isString -> element.content
+            element.booleanOrNull != null -> element.boolean
+            // Ưu tiên Long, sau đó Double để bao phủ nhiều loại số JSON
+            element.longOrNull != null -> element.long
+            element.doubleOrNull != null -> element.double
+            else -> element.content // Trường hợp dự phòng nếu không parse được số
+        }
+        is JsonObject -> element.map { (key, value) ->
+            // JsonObject -> Map<String, Any?>
+            key to jsonElementToAny(value) // Đệ quy cho giá trị
+        }.toMap()
+        is JsonArray -> element.map { jsonElementToAny(it) } // JsonArray -> List<Any?> (đệ quy)
     }
 }

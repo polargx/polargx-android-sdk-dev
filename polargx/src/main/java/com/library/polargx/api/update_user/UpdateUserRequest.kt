@@ -1,6 +1,6 @@
 package com.library.polargx.api.update_user
 
-import com.library.polargx.models.MapModel
+import MapModel
 import com.library.polargx.models.UpdateUserModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

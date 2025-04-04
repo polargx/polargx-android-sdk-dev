@@ -1,5 +1,6 @@
 package com.library.polargx.models
 
+import MapModel
 import androidx.annotation.StringDef
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -23,7 +24,7 @@ data class TrackEventModel(
         userID: String?,
         eventName: String?,
         eventTime: String?,
-        data: Map<String, Any>?
+        data: Map<String, Any?>?
     ) : this(organizationUnid, userID, eventName, eventTime, MapModel(data))
 
     @Retention(value = AnnotationRetention.SOURCE)

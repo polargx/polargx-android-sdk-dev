@@ -2,7 +2,6 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -23,13 +22,13 @@ import com.library.polargx.helpers.FileStorage
 import com.library.polargx.helpers.Logger
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.models.LinkDataModel
-import com.library.polargx.models.MapModel
 import com.library.polargx.models.TrackEventModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
@@ -40,8 +39,8 @@ import org.koin.core.context.startKoin
 import java.util.Date
 import java.util.UUID
 
-typealias OnLinkClickHandler = (link: String?, data: Map<String, Any>?, error: Exception?) -> Unit
-typealias UntrackedEvent = Triple<String, String, Map<String, Any>>
+typealias OnLinkClickHandler = (link: String?, data: Map<String, Any?>?, error: Exception?) -> Unit
+typealias UntrackedEvent = Triple<String, String, Map<String, Any?>>
 
 private class InternalPolarApp(
     val appId: String,
@@ -134,39 +133,41 @@ private class InternalPolarApp(
      * - Create current user session if needed
      * - Backup user session into the otherUserSessions to keep running for sending events
      */
-    override fun updateUser(userID: String?, attributes: Map<String, Any>?) {
-        currentUserSession?.let { userSession ->
-            if (userSession.userID != userID) {
-                currentUserSession = null
-                otherUserSessions.add(userSession)
+    override fun updateUser(userID: String?, attributes: Map<String, Any?>?) {
+        CoroutineScope(Dispatchers.Main).launch {
+            currentUserSession?.let { userSession ->
+                if (userSession.userID != userID) {
+                    currentUserSession = null
+                    otherUserSessions.add(userSession)
+                }
             }
-        }
 
-        var events = mutableListOf<UntrackedEvent>()
-        if (currentUserSession == null && userID != null) {
-            val name = "events_${Date().time}_${UUID.randomUUID()}.json"
-            val file = appDirectory.file(name)
-            Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
+            var events = mutableListOf<UntrackedEvent>()
+            if (currentUserSession == null && userID != null) {
+                val name = "events_${Date().time}_${UUID.randomUUID()}.json"
+                val file = appDirectory.file(name)
+                Logger.d(TAG, "TrackingEvents stored in `${file.absolutePath}`")
 
-            events = pendingEvents
-            pendingEvents = arrayListOf()
+                events = pendingEvents
+                pendingEvents = arrayListOf()
 
-            currentUserSession = UserSession(
-                organizationUnid = appId,
-                userID = userID,
-                trackingFileStorage = file
-            )
-        }
+                currentUserSession = UserSession(
+                    organizationUnid = appId,
+                    userID = userID,
+                    trackingFileStorage = file
+                )
+            }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            listOf(
-                async { currentUserSession?.trackEvents(events) },
-                async { currentUserSession?.setAttributes(attributes ?: emptyMap()) }
-            )
+            withContext(Dispatchers.IO) {
+                listOf(
+                    async { currentUserSession?.trackEvents(events) },
+                    async { currentUserSession?.setAttributes(attributes ?: emptyMap()) }
+                )
+            }
         }
     }
 
-    override fun trackEvent(name: String, attributes: Map<String, Any>) {
+    override fun trackEvent(name: String, attributes: Map<String, Any?>) {
         CoroutineScope(Dispatchers.Main).launch {
             val date = DateTimeUtils.dateToString(
                 source = Date(),
@@ -175,8 +176,10 @@ private class InternalPolarApp(
             )
             val userSession = currentUserSession
             if (userSession != null) {
-                val events = listOf(UntrackedEvent(name, date, attributes))
-                userSession.trackEvents(events)
+                withContext(Dispatchers.IO) {
+                    val events = listOf(UntrackedEvent(name, date, attributes))
+                    userSession.trackEvents(events)
+                }
             } else {
                 if (pendingEvents.size == maxCapacity) {
                     pendingEvents.removeAt(0)
@@ -336,8 +339,8 @@ open class PolarApp {
 
     open fun bind(uri: Uri?, listener: PolarInitListener?) {}
     open fun reBind(uri: Uri?, listener: PolarInitListener?) {}
-    open fun updateUser(userID: String?, attributes: Map<String, Any>?) {}
-    open fun trackEvent(name: String, attributes: Map<String, Any>) {}
+    open fun updateUser(userID: String?, attributes: Map<String, Any?>?) {}
+    open fun trackEvent(name: String, attributes: Map<String, Any?>) {}
 
     companion object {
         const val TAG = ">>>Polar"
@@ -365,22 +368,6 @@ open class PolarApp {
                 apiKey = apiKey,
                 onLinkClickHandler = onLinkClickHandler
             )
-
-            val jsonString = """
-            {
-                "name": "John",
-                "age": 30,
-                "isAdmin": true,
-                "scores": [100, 95, 90],
-                "address": {
-                    "city": "New York",
-                    "zipcode": "10001"
-                }
-            }
-            """
-
-//            val model = MapModel.fromJson(jsonString)
-//            Log.d("TESTING", "initialize: ${model.content}")
         }
     }
 }

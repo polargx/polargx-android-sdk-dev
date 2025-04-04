@@ -1,5 +1,6 @@
 package com.library.polargx.models
 
+import MapModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
