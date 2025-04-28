@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import com.library.polargx.Constants
+import com.library.polargx.api.deregister_fcm.DeregisterFCMRequest
 import com.library.polargx.api.link_data.LinkDataResponse
 import com.library.polargx.api.track_event.TrackEventRequest
 import com.library.polargx.api.track_link.TrackLinkClickRequest
 import com.library.polargx.api.track_link.TrackLinkClickResponse
+import com.library.polargx.api.register_fcm.RegisterFCMRequest
 import com.library.polargx.api.update_link.UpdateLinkClickRequest
 import com.library.polargx.api.update_user.UpdateUserRequest
 import com.library.polargx.helpers.ApiError
@@ -32,6 +34,28 @@ class ApiServiceImpl(
     override suspend fun updateUser(request: UpdateUserRequest?) {
         val response = client.post {
             url.path("sdk/v1/users/profileUpdate")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun registerFCM(request: RegisterFCMRequest?) {
+        val response = client.post {
+            url.path("sdk/v1/users/registerFcmToken")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun deregisterFCM(request: DeregisterFCMRequest?) {
+        val response = client.post {
+            url.path("sdk/v1/users/deregisterFcmToken")
             setBody(request)
         }
         if (response.status.isSuccess()) {

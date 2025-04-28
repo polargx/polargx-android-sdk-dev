@@ -139,6 +139,7 @@ private class InternalPolarApp(
                 if (userSession.userID != userID) {
                     currentUserSession = null
                     otherUserSessions.add(userSession)
+                    userSession.invalidate()
                 }
             }
 
@@ -163,6 +164,16 @@ private class InternalPolarApp(
                     async { currentUserSession?.trackEvents(events) },
                     async { currentUserSession?.setAttributes(attributes ?: emptyMap()) }
                 )
+            }
+        }
+    }
+
+    override fun setPushToken(fcm: String?) {
+        CoroutineScope(Dispatchers.Main).launch {
+            currentUserSession?.let { userSession ->
+                withContext(Dispatchers.IO) {
+                    userSession.setPushToken(fcm)
+                }
             }
         }
     }
@@ -340,6 +351,7 @@ open class PolarApp {
     open fun bind(uri: Uri?, listener: PolarInitListener?) {}
     open fun reBind(uri: Uri?, listener: PolarInitListener?) {}
     open fun updateUser(userID: String?, attributes: Map<String, Any?>?) {}
+    open fun setPushToken(fcm: String?) {}
     open fun trackEvent(name: String, attributes: Map<String, Any?>) {}
 
     companion object {
