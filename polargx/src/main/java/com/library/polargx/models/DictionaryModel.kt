@@ -10,20 +10,20 @@ import kotlinx.serialization.descriptors.*
  * để xử lý việc mã hóa và giải mã JSON.
  */
 @Serializable(with = DictionaryModelSerializer::class)
-data class MapModel(val content: Map<String, Any?>?) // Sử dụng Any? để có thể chứa null
+data class DictionaryModel(val content: Map<String, Any?>?) // Sử dụng Any? để có thể chứa null
 
 /**
  * Serializer tùy chỉnh cho DictionaryModel.
  * Nó xử lý việc chuyển đổi giữa DictionaryModel và cấu trúc JsonObject.
  */
-object DictionaryModelSerializer : KSerializer<MapModel> {
+object DictionaryModelSerializer : KSerializer<DictionaryModel> {
 
     // Descriptor mô tả cấu trúc dữ liệu khi serialize, tương tự như một Map hoặc JsonObject.
     @OptIn(InternalSerializationApi::class)
     override val descriptor: SerialDescriptor =
         buildSerialDescriptor("DictionaryModel", StructureKind.MAP)
 
-    override fun serialize(encoder: Encoder, value: MapModel) {
+    override fun serialize(encoder: Encoder, value: DictionaryModel) {
         // Chỉ hoạt động với định dạng JSON
         val jsonEncoder = encoder as? JsonEncoder
             ?: throw SerializationException("This serializer can only be used with JSON format")
@@ -39,7 +39,7 @@ object DictionaryModelSerializer : KSerializer<MapModel> {
         jsonEncoder.encodeJsonElement(jsonObject)
     }
 
-    override fun deserialize(decoder: Decoder): MapModel {
+    override fun deserialize(decoder: Decoder): DictionaryModel {
         // Chỉ hoạt động với định dạng JSON
         val jsonDecoder = decoder as? JsonDecoder
             ?: throw SerializationException("This serializer can only be used with JSON format")
@@ -54,7 +54,7 @@ object DictionaryModelSerializer : KSerializer<MapModel> {
             resultMap[key] = jsonElementToAny(jsonElement)
         }
         // Trả về một DictionaryModel mới với Map đã giải mã
-        return MapModel(resultMap)
+        return DictionaryModel(resultMap)
     }
 
     /**

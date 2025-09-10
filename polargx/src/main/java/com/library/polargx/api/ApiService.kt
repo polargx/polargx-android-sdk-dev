@@ -25,5 +25,7 @@ interface ApiService {
 
     suspend fun updateLinkClick(clickUnid: String?, request: UpdateLinkClickRequest?)
 
+    suspend fun matchLinkClick(fingerprint: String?)
+
     suspend fun isFirstTimeLaunch(context: Context?, nowInMillis: Long): Boolean
 }

@@ -6,13 +6,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LinkDataResponse(
-    @SerialName("data")
-    val data: Data?
-) {
-
-    @Serializable
-    data class Data(
-        @SerialName("sdkLinkData")
-        val sdkLinkData: LinkDataModel?
-    )
-}
+    @SerialName("sdkLinkData")
+    val sdkLinkData: LinkDataModel?
+)

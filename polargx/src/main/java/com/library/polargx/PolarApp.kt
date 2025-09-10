@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
@@ -68,6 +69,8 @@ private class InternalPolarApp(
     private var currentUserSession: UserSession? = null
     private val otherUserSessions = mutableListOf<UserSession>()
     private var pendingEvents = arrayListOf<UntrackedEvent>()
+
+    private var isHandlingOpenUrl = false
 
     init {
         if (apiKey.startsWith("dev_")) {
@@ -263,6 +266,47 @@ private class InternalPolarApp(
             }
         }
     }
+
+//    private fun matchingWebLinkClick() {
+//        val apiService = apiService
+//        CoroutineScope(Dispatchers.IO).launch {
+//            try {
+//                while (isHandlingOpenUrl) {
+//                    delay(1000)
+//                }
+//
+//                val ip = apiService.getClientIP() ?: throw Exception("Failed to get client IP")
+//                val fingerprint = fingerprintGenerator.generateFingerprint(ip)
+//                val linkClickedResponse = apiService.matchLinkClick(fingerprint)
+//                    ?: throw Exception("matchingWebLinkClick failed: Internal SERVER error.")
+//
+//                val linkClick = linkClickedResponse.linkClick
+//                if (linkClick == null || linkClick.sdkUsed) {
+//                    Logger.rlog("[WARN] matchingWebLinkClick completed: No matching found!")
+//                    return@launch
+//                }
+//
+//                var linkUrlString = linkClick.url
+//                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
+//                    linkUrlString = "https://$linkUrlString"
+//                }
+//
+//                val linkUrl = try {
+//                    URL(linkUrlString)
+//                } catch (e: Exception) {
+//                    throw Exception("matchingWebLinkClick failed: invalid or unsupported url `${linkClick.url}`")
+//                }
+//
+//                val (subDomain, slug) = Formatter.validateSupportingURL(linkUrl)
+//                    ?: throw Exception("matchingWebLinkClick failed: invalid or unsupported url `${linkClick.url}`")
+//
+//                handleOpenningURL(linkUrl, subDomain, slug, linkClick.unid)
+//            } catch (e: Exception) {
+//                Logger.rlog("[ERROR]⛔️ ${e.message}")
+//            }
+//        }
+//    }
+
 
     private suspend fun handleOpeningURL(uri: Uri?) {
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains

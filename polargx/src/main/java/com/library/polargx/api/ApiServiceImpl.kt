@@ -77,20 +77,20 @@ class ApiServiceImpl(
 
     override suspend fun getLinkData(domain: String, slug: String): LinkDataModel? {
         val response = client.get {
-            url.path("sdk/v1/links/data")
+            url.path("api/v1/links/resolve")
             parameter("domain", domain)
             parameter("slug", slug)
         }
         if (response.status.isSuccess()) {
             val body = response.body<LinkDataResponse?>()
-            return body?.data?.sdkLinkData
+            return body?.sdkLinkData
         }
         throw ApiError(response.bodyAsText())
     }
 
     override suspend fun trackLinkClick(request: TrackLinkClickRequest?): LinkClickModel? {
         val response = client.post {
-            url.path("sdk/v1/links/track")
+            url.path("api/v1/links/clicks")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -102,7 +102,7 @@ class ApiServiceImpl(
 
     override suspend fun updateLinkClick(clickUnid: String?, request: UpdateLinkClickRequest?) {
         val response = client.put {
-            url.path("sdk/v1/links/clicks/$clickUnid")
+            url.path("api/v1/links/clicks/$clickUnid")
             setBody(request)
         }
         if (response.status.isSuccess()) {

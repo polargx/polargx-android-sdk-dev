@@ -1,6 +1,6 @@
 package com.library.polargx.models
 
-import MapModel
+import DictionaryModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -11,12 +11,12 @@ data class UpdateUserModel(
     @SerialName("userID")
     val userID: String?,
     @SerialName("data")
-    val data: MapModel?
+    val data: DictionaryModel?
 ) {
 
     constructor(
         organizationUnid: String?,
         userID: String?,
         data: Map<String, Any?>?
-    ) : this(organizationUnid, userID, MapModel(data))
+    ) : this(organizationUnid, userID, DictionaryModel(data))
 }
