@@ -1,8 +1,8 @@
 package com.library.polargx
 
 import com.library.polargx.api.ApiService
-import com.library.polargx.api.deregister_fcm.DeregisterFCMRequest
-import com.library.polargx.api.register_fcm.RegisterFCMRequest
+import com.library.polargx.api.fcm_tokens.deregister.DeregisterFCMRequest
+import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
 import com.library.polargx.api.update_user.UpdateUserRequest
 import com.library.polargx.helpers.ApiError
 import com.library.polargx.helpers.Logger

@@ -2,6 +2,7 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -19,6 +20,7 @@ import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.helpers.DateTimeUtils
 import com.library.polargx.helpers.FileStorage
+import com.library.polargx.helpers.FingerprintGenerator
 import com.library.polargx.helpers.Logger
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.models.LinkDataModel
@@ -51,6 +53,8 @@ private class InternalPolarApp(
 
     private val apiService by inject<ApiService>()
     private val application by inject<Application>()
+
+    private val fingerprintGenerator = FingerprintGenerator(application)
 
     private val maxCapacity = 100
 
@@ -114,9 +118,11 @@ private class InternalPolarApp(
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
+        isHandlingOpenUrl = true
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
             handleOpeningURL(uri)
+            isHandlingOpenUrl = false
         }
     }
 
@@ -125,9 +131,11 @@ private class InternalPolarApp(
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
+        isHandlingOpenUrl = true
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
             handleOpeningURL(uri)
+            isHandlingOpenUrl = false
         }
     }
 
@@ -221,6 +229,7 @@ private class InternalPolarApp(
                     name = TrackEventModel.Type.APP_ACTIVE,
                     attributes = mapOf()
                 )
+                matchingWebLinkClick()
             }
 
             override fun onPause(owner: LifecycleOwner) {
@@ -267,46 +276,33 @@ private class InternalPolarApp(
         }
     }
 
-//    private fun matchingWebLinkClick() {
-//        val apiService = apiService
-//        CoroutineScope(Dispatchers.IO).launch {
-//            try {
-//                while (isHandlingOpenUrl) {
-//                    delay(1000)
-//                }
-//
-//                val ip = apiService.getClientIP() ?: throw Exception("Failed to get client IP")
-//                val fingerprint = fingerprintGenerator.generateFingerprint(ip)
-//                val linkClickedResponse = apiService.matchLinkClick(fingerprint)
-//                    ?: throw Exception("matchingWebLinkClick failed: Internal SERVER error.")
-//
-//                val linkClick = linkClickedResponse.linkClick
-//                if (linkClick == null || linkClick.sdkUsed) {
-//                    Logger.rlog("[WARN] matchingWebLinkClick completed: No matching found!")
-//                    return@launch
-//                }
-//
-//                var linkUrlString = linkClick.url
-//                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
-//                    linkUrlString = "https://$linkUrlString"
-//                }
-//
-//                val linkUrl = try {
-//                    URL(linkUrlString)
-//                } catch (e: Exception) {
-//                    throw Exception("matchingWebLinkClick failed: invalid or unsupported url `${linkClick.url}`")
-//                }
-//
-//                val (subDomain, slug) = Formatter.validateSupportingURL(linkUrl)
-//                    ?: throw Exception("matchingWebLinkClick failed: invalid or unsupported url `${linkClick.url}`")
-//
-//                handleOpenningURL(linkUrl, subDomain, slug, linkClick.unid)
-//            } catch (e: Exception) {
-//                Logger.rlog("[ERROR]⛔️ ${e.message}")
-//            }
-//        }
-//    }
+    private fun matchingWebLinkClick() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                while (isHandlingOpenUrl) {
+                    delay(1000)
+                }
 
+                val ip = apiService.getClientIP() ?: throw Exception("Failed to get client IP")
+                val fingerprint = fingerprintGenerator.generateFingerprint(ip)
+                val linkClick = apiService.matchLinkClick(fingerprint)
+                    ?: throw Exception("matchingWebLinkClick failed: Internal SERVER error.")
+
+                if (linkClick.sdkUsed != true) {
+                    Logger.d(TAG, "[WARN] matchingWebLinkClick completed: No matching found!")
+                    return@launch
+                }
+
+                var linkUrlString = linkClick.url ?: ""
+                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
+                    linkUrlString = "https://$linkUrlString"
+                }
+                handleOpeningURL(linkUrlString.toUri())
+            } catch (e: Exception) {
+                Logger.d(TAG, "[ERROR]⛔️ ${e.message}")
+            }
+        }
+    }
 
     private suspend fun handleOpeningURL(uri: Uri?) {
         val supportedBaseDomains = Configuration.Env.supportedBaseDomains

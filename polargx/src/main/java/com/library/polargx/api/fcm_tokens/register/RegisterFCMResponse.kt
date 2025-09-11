@@ -1,4 +1,4 @@
-package com.library.polargx.api.register_fcm
+package com.library.polargx.api.fcm_tokens.register
 
 import kotlinx.serialization.Serializable
 

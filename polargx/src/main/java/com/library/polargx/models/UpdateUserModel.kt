@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UpdateUserModel(
+    @SerialName("clobberMatchingAttributes")
+    val clobberMatchingAttributes: Boolean?,
     @SerialName("organizationUnid")
     val organizationUnid: String?,
     @SerialName("userID")
@@ -18,5 +20,10 @@ data class UpdateUserModel(
         organizationUnid: String?,
         userID: String?,
         data: Map<String, Any?>?
-    ) : this(organizationUnid, userID, DictionaryModel(data))
+    ) : this(
+        clobberMatchingAttributes = true,
+        organizationUnid = organizationUnid,
+        userID = userID,
+        data = DictionaryModel(data)
+    )
 }

@@ -1,11 +1,11 @@
-package com.library.polargx.api.deregister_fcm
+package com.library.polargx.api.fcm_tokens.register
 
-import com.library.polargx.models.DeregisterFCMModel
+import com.library.polargx.models.RegisterFCMModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class DeregisterFCMRequest(
+data class RegisterFCMRequest(
     @SerialName("organizationUnid")
     val organizationUnid: String?,
     @SerialName("userID")
@@ -15,9 +15,9 @@ data class DeregisterFCMRequest(
 ) {
 
     companion object {
-        fun from(fcm: DeregisterFCMModel?): DeregisterFCMRequest? {
+        fun from(fcm: RegisterFCMModel?): RegisterFCMRequest? {
             if (fcm == null) return null
-            return DeregisterFCMRequest(
+            return RegisterFCMRequest(
                 organizationUnid = fcm.organizationUnid,
                 userID = fcm.userID,
                 fcmToken = fcm.fcmToken

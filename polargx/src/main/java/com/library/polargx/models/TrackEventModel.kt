@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TrackEventModel(
+    @SerialName("clobberMatchingAttributes")
+    val clobberMatchingAttributes: Boolean?,
     @SerialName("organizationUnid")
     val organizationUnid: String?,
     @SerialName("userID")
@@ -15,6 +17,8 @@ data class TrackEventModel(
     val eventName: String?,
     @SerialName("eventTime")
     val eventTime: String?,
+    @SerialName("eventUnid")
+    val eventUnid: String?,
     @SerialName("data")
     val data: DictionaryModel?
 ) {
@@ -25,7 +29,15 @@ data class TrackEventModel(
         eventName: String?,
         eventTime: String?,
         data: Map<String, Any?>?
-    ) : this(organizationUnid, userID, eventName, eventTime, DictionaryModel(data))
+    ) : this(
+        clobberMatchingAttributes = false,
+        organizationUnid = organizationUnid,
+        userID = userID,
+        eventName = eventName,
+        eventTime = eventTime,
+        eventUnid = null,
+        data = DictionaryModel(data)
+    )
 
     @Retention(value = AnnotationRetention.SOURCE)
     @StringDef(

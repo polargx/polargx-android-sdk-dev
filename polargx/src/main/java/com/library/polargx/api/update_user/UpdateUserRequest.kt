@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UpdateUserRequest(
+    @SerialName("clobberMatchingAttributes")
+    val clobberMatchingAttributes: Boolean?,
     @SerialName("organizationUnid")
     val organizationUnid: String?,
     @SerialName("userID")
@@ -19,6 +21,7 @@ data class UpdateUserRequest(
         fun from(user: UpdateUserModel?): UpdateUserRequest? {
             if (user == null) return null
             return UpdateUserRequest(
+                clobberMatchingAttributes = user.clobberMatchingAttributes,
                 organizationUnid = user.organizationUnid,
                 userID = user.userID,
                 data = user.data

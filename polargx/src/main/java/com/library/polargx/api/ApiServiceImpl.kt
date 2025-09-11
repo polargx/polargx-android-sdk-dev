@@ -3,26 +3,34 @@ package com.library.polargx.api
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import com.library.polargx.Configuration
 import com.library.polargx.Constants
-import com.library.polargx.api.deregister_fcm.DeregisterFCMRequest
+import com.library.polargx.api.device_tokens.deregister.DeregisterDeviceTokenRequest
+import com.library.polargx.api.device_tokens.register.RegisterDeviceTokenRequest
+import com.library.polargx.api.fcm_tokens.deregister.DeregisterFCMRequest
+import com.library.polargx.api.link_click.LinkClickResponse
 import com.library.polargx.api.link_data.LinkDataResponse
+import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
 import com.library.polargx.api.track_event.TrackEventRequest
 import com.library.polargx.api.track_link.TrackLinkClickRequest
 import com.library.polargx.api.track_link.TrackLinkClickResponse
-import com.library.polargx.api.register_fcm.RegisterFCMRequest
 import com.library.polargx.api.update_link.UpdateLinkClickRequest
 import com.library.polargx.api.update_user.UpdateUserRequest
 import com.library.polargx.helpers.ApiError
+import com.library.polargx.helpers.Logger
+import com.library.polargx.models.ClientInfoModel
 import com.library.polargx.models.LinkClickModel
 import com.library.polargx.models.LinkDataModel
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.accept
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.isSuccess
 import io.ktor.http.path
 import java.util.concurrent.TimeUnit
@@ -31,31 +39,10 @@ class ApiServiceImpl(
     private val client: HttpClient,
     private val sf: SharedPreferences
 ) : ApiService {
+
     override suspend fun updateUser(request: UpdateUserRequest?) {
         val response = client.post {
-            url.path("sdk/v1/users/profileUpdate")
-            setBody(request)
-        }
-        if (response.status.isSuccess()) {
-            return response.body()
-        }
-        throw ApiError(response.bodyAsText())
-    }
-
-    override suspend fun registerFCM(request: RegisterFCMRequest?) {
-        val response = client.post {
-            url.path("sdk/v1/users/registerFcmToken")
-            setBody(request)
-        }
-        if (response.status.isSuccess()) {
-            return response.body()
-        }
-        throw ApiError(response.bodyAsText())
-    }
-
-    override suspend fun deregisterFCM(request: DeregisterFCMRequest?) {
-        val response = client.post {
-            url.path("sdk/v1/users/deregisterFcmToken")
+            url.path("api/v1/users/profile")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -66,7 +53,51 @@ class ApiServiceImpl(
 
     override suspend fun trackEvent(request: TrackEventRequest?) {
         val response = client.post {
-            url.path("sdk/v1/events/track")
+            url.path("api/v1/events")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun registerFCM(request: RegisterFCMRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/fcm-tokens/register")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun deregisterFCM(request: DeregisterFCMRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/fcm-tokens/deregister")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun registerDeviceToken(request: RegisterDeviceTokenRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/device-tokens/register")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun deregisterDeviceToken(request: DeregisterDeviceTokenRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/device-tokens/deregister")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -109,6 +140,44 @@ class ApiServiceImpl(
             return response.body()
         }
         throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun matchLinkClick(fingerprint: String?): LinkClickModel? {
+        val response = client.get {
+            url.path("api/v1/links/clicks/match")
+            parameter("fingerprint", fingerprint)
+        }
+        if (response.status.isSuccess()) {
+            val body = response.body<LinkClickResponse?>()
+            return body?.data?.linkClick
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun getClientInfo(): ClientInfoModel? {
+        val response = client.get(Configuration.Env.appLinkServer) {
+            url.path("api/client-info")
+        }
+        if (response.status.isSuccess()) {
+            return response.body<ClientInfoModel?>()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun getClientIP(): String? {
+        return try {
+            val response = client.get("https://api6.ipify.org/") {
+                accept(ContentType.Text.Plain)
+            }
+            if (response.status.isSuccess()) {
+                return response.body<String>()
+            } else {
+                throw Exception("Failed with response: $response")
+            }
+        } catch (e: Exception) {
+            Logger.d(">>>Polar", "[ERROR] Can't get ipv6 from ipify.org: $e")
+            getClientInfo()?.ip
+        }
     }
 
     override suspend fun isFirstTimeLaunch(context: Context?, nowInMillis: Long): Boolean {
