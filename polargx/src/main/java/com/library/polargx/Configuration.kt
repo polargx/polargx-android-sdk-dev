@@ -4,7 +4,7 @@ open class EnvConfiguration(
     open val name: String,
     open val server: String,
     open val supportedBaseDomains: String,
-    open val appLinkServer: String = "https://___default.${supportedBaseDomains.last()}"
+    open val appLinkServer: String = "https://___default.$supportedBaseDomains"
 )
 
 class DevEnvConfiguration(

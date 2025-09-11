@@ -8,9 +8,9 @@ import com.library.polargx.Constants
 import com.library.polargx.api.device_tokens.deregister.DeregisterDeviceTokenRequest
 import com.library.polargx.api.device_tokens.register.RegisterDeviceTokenRequest
 import com.library.polargx.api.fcm_tokens.deregister.DeregisterFCMRequest
+import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
 import com.library.polargx.api.link_click.LinkClickResponse
 import com.library.polargx.api.link_data.LinkDataResponse
-import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
 import com.library.polargx.api.track_event.TrackEventRequest
 import com.library.polargx.api.track_link.TrackLinkClickRequest
 import com.library.polargx.api.track_link.TrackLinkClickResponse
@@ -113,8 +113,8 @@ class ApiServiceImpl(
             parameter("slug", slug)
         }
         if (response.status.isSuccess()) {
-            val body = response.body<LinkDataResponse?>()
-            return body?.sdkLinkData
+            val body = response.body<LinkDataResponse>()
+            return body.data?.sdkLinkData
         }
         throw ApiError(response.bodyAsText())
     }
