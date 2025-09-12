@@ -20,7 +20,6 @@ import com.library.polargx.extension.getOsVersion
 import com.library.polargx.extension.getSdkVersion
 import com.library.polargx.helpers.DateTimeUtils
 import com.library.polargx.helpers.FileStorage
-import com.library.polargx.helpers.FingerprintGenerator
 import com.library.polargx.helpers.Logger
 import com.library.polargx.listener.PolarInitListener
 import com.library.polargx.models.LinkDataModel
@@ -29,7 +28,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
@@ -54,8 +52,6 @@ private class InternalPolarApp(
     private val apiService by inject<ApiService>()
     private val application by inject<Application>()
 
-    private val fingerprintGenerator = FingerprintGenerator(application)
-
     private val maxCapacity = 100
 
     private var mLastLink: LinkDataModel? = null
@@ -73,8 +69,6 @@ private class InternalPolarApp(
     private var currentUserSession: UserSession? = null
     private val otherUserSessions = mutableListOf<UserSession>()
     private var pendingEvents = arrayListOf<UntrackedEvent>()
-
-    private var isHandlingOpenUrl = false
 
     init {
         if (apiKey.startsWith("dev_")) {
@@ -118,11 +112,9 @@ private class InternalPolarApp(
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
-        isHandlingOpenUrl = true
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
             handleOpeningURL(uri)
-            isHandlingOpenUrl = false
         }
     }
 
@@ -131,11 +123,9 @@ private class InternalPolarApp(
         if (mGetLinkJob?.isActive == true) {
             mGetLinkJob?.cancel()
         }
-        isHandlingOpenUrl = true
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
             handleOpeningURL(uri)
-            isHandlingOpenUrl = false
         }
     }
 
@@ -211,8 +201,14 @@ private class InternalPolarApp(
         }
     }
 
-    override fun matchLinkClick(clid: String?) {
-        if (clid == null) return
+    override fun matchLinkClick(url: String?) {
+        if (url.isNullOrEmpty()) return
+        val params = url.split("&").associate {
+            val parts = it.split("=")
+            parts[0] to parts.getOrElse(1) { "" }
+        }
+        val clid = params["__clid"]
+        if (clid.isNullOrEmpty()) return
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val linkClick = apiService.matchLinkClick(Constants.FINGERPRINT)
@@ -222,7 +218,7 @@ private class InternalPolarApp(
                 }
 
                 var linkUrlString = linkClick.url ?: ""
-                if (!linkUrlString.startsWith("http://", true) && !linkUrlString.startsWith("https://", true)) {
+                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
                     linkUrlString = "https://$linkUrlString"
                 }
                 handleOpeningURL(linkUrlString.toUri())
@@ -292,34 +288,6 @@ private class InternalPolarApp(
                 if (eventQueue.events.isEmpty()) {
                     FileStorage.remove(pendingEventFile, appDirectory)
                 }
-            }
-        }
-    }
-
-    private fun matchingWebLinkClick() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                while (isHandlingOpenUrl) {
-                    delay(1000)
-                }
-
-                val ip = apiService.getClientIP() ?: throw Exception("Failed to get client IP")
-                val fingerprint = fingerprintGenerator.generateFingerprint(ip)
-                val linkClick = apiService.matchLinkClick(fingerprint)
-                    ?: throw Exception("matchingWebLinkClick failed: Internal SERVER error.")
-
-                if (linkClick.sdkUsed != true) {
-                    Logger.d(TAG, "[WARN] matchingWebLinkClick completed: No matching found!")
-                    return@launch
-                }
-
-                var linkUrlString = linkClick.url ?: ""
-                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
-                    linkUrlString = "https://$linkUrlString"
-                }
-                handleOpeningURL(linkUrlString.toUri())
-            } catch (e: Exception) {
-                Logger.d(TAG, "[ERROR]⛔️ ${e.message}")
             }
         }
     }
@@ -413,7 +381,7 @@ open class PolarApp {
     open fun updateUser(userID: String?, attributes: Map<String, Any?>?) {}
     open fun setPushToken(fcm: String?) {}
     open fun trackEvent(name: String, attributes: Map<String, Any?>) {}
-    open fun matchLinkClick(clid: String?) {}
+    open fun matchLinkClick(url: String?) {}
 
     companion object {
         const val TAG = ">>>Polar"
