@@ -211,6 +211,27 @@ private class InternalPolarApp(
         }
     }
 
+    override fun matchLinkClick(clid: String?) {
+        if (clid == null) return
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val linkClick = apiService.matchLinkClick(Constants.FINGERPRINT)
+                if (linkClick?.sdkUsed != true) {
+                    Logger.d(TAG, "[WARN] matchingWebLinkClick completed: No matching found!")
+                    return@launch
+                }
+
+                var linkUrlString = linkClick.url ?: ""
+                if (!linkUrlString.startsWith("http://", true) && !linkUrlString.startsWith("https://", true)) {
+                    linkUrlString = "https://$linkUrlString"
+                }
+                handleOpeningURL(linkUrlString.toUri())
+            } catch (e: Exception) {
+                Logger.d(TAG, "[ERROR]⛔️ ${e.message}")
+            }
+        }
+    }
+
     private fun startTrackingAppLifeCycle() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onCreate(owner: LifecycleOwner) {
@@ -229,7 +250,6 @@ private class InternalPolarApp(
                     name = TrackEventModel.Type.APP_ACTIVE,
                     attributes = mapOf()
                 )
-                matchingWebLinkClick()
             }
 
             override fun onPause(owner: LifecycleOwner) {
@@ -393,6 +413,7 @@ open class PolarApp {
     open fun updateUser(userID: String?, attributes: Map<String, Any?>?) {}
     open fun setPushToken(fcm: String?) {}
     open fun trackEvent(name: String, attributes: Map<String, Any?>) {}
+    open fun matchLinkClick(clid: String?) {}
 
     companion object {
         const val TAG = ">>>Polar"

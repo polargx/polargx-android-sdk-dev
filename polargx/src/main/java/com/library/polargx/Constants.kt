@@ -4,6 +4,8 @@ import java.util.TimeZone
 
 object Constants {
 
+    const val FINGERPRINT = "AndroidSDK"
+
     object Koin {
         const val APP_HTTP_CLIENT = "PolarGXConstants.Koin.APP_HTTP_CLIENT"
     }
