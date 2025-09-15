@@ -2,7 +2,6 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
-import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -114,7 +113,8 @@ private class InternalPolarApp(
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
-            handleOpeningURL(uri)
+            val (subdomain, slug) = getSubdomainAndSlug(uri)
+            handleOpeningURL(subdomain = subdomain, slug = slug, clid = null)
         }
     }
 
@@ -125,7 +125,8 @@ private class InternalPolarApp(
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
-            handleOpeningURL(uri)
+            val (subdomain, slug) = getSubdomainAndSlug(uri)
+            handleOpeningURL(subdomain = subdomain, slug = slug, clid = null)
         }
     }
 
@@ -207,24 +208,13 @@ private class InternalPolarApp(
             val parts = it.split("=")
             parts[0] to parts.getOrElse(1) { "" }
         }
+        val utmSource = params["__utm_source"]
+        val subdomain = params["__subdomain"]
+        val slug = params["__slug"]
         val clid = params["__clid"]
-        if (clid.isNullOrEmpty()) return
+        if (utmSource != "polar") return
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val linkClick = apiService.matchLinkClick(Constants.FINGERPRINT)
-                if (linkClick?.sdkUsed != true) {
-                    Logger.d(TAG, "[WARN] matchingWebLinkClick completed: No matching found!")
-                    return@launch
-                }
-
-                var linkUrlString = linkClick.url ?: ""
-                if (!linkUrlString.startsWith("http://") && !linkUrlString.startsWith("https://")) {
-                    linkUrlString = "https://$linkUrlString"
-                }
-                handleOpeningURL(linkUrlString.toUri())
-            } catch (e: Exception) {
-                Logger.d(TAG, "[ERROR]⛔️ ${e.message}")
-            }
+            handleOpeningURL(subdomain = subdomain, slug = slug, clid = clid)
         }
     }
 
@@ -289,6 +279,49 @@ private class InternalPolarApp(
                     FileStorage.remove(pendingEventFile, appDirectory)
                 }
             }
+        }
+    }
+
+    private suspend fun handleOpeningURL(subdomain: String?, slug: String?, clid: String?) {
+        if (subdomain.isNullOrEmpty() && slug.isNullOrEmpty()) {
+            mLastListener?.onInitFinished(null, null)
+            return
+        }
+
+        val clickTime = DateTimeUtils.dateToString(
+            Date(),
+            Constants.DateTime.DEFAULT_DATE_FORMAT,
+            Constants.DateTime.utcTimeZone,
+        )
+
+        try {
+            mLastLink = apiService.getLinkData(domain = subdomain, slug = slug)
+            val trackRequest = TrackLinkClickRequest(
+                domain = subdomain,
+                slug = slug,
+                trackType = TrackLinkClickRequest.TrackType.APP_CLICK,
+                clickTime = clickTime,
+                fingerprint = TrackLinkClickRequest.Fingerprint.ANDROID_SDK,
+                deviceData = mapOf(),
+                additionalData = mapOf(),
+            )
+
+            if (clid == null) {
+//                val linkClick = apiService.trackLinkClick(trackRequest)
+//                val clickUnid = linkClick?.unid
+//                val request = UpdateLinkClickRequest(sdkUsed = true)
+//                apiService.updateLinkClick(clickUnid, request)
+            } else {
+                val request = UpdateLinkClickRequest(sdkUsed = true)
+                apiService.updateLinkClick(clid, request)
+            }
+            val link = "https://" + mLastLink?.url
+            onLinkClickHandler(link, mLastLink?.data?.content, null)
+            mLastListener?.onInitFinished(mLastLink?.data?.content, null)
+        } catch (e: Exception) {
+            val link = "https://" + mLastLink?.url
+            onLinkClickHandler(link, null, e)
+            mLastListener?.onInitFinished(null, e)
         }
     }
 
@@ -370,6 +403,14 @@ private class InternalPolarApp(
                         "\nwindow.densityDpi=${densityDpi}"
             )
         }
+    }
+
+    private fun getSubdomainAndSlug(uri: Uri?): Pair<String, String> {
+        val host = uri?.host ?: ""
+        val domainParts = host.split(".")
+        val subdomain = if (domainParts.size > 2) domainParts[0] else ""
+        val slug = uri?.lastPathSegment ?: ""
+        return subdomain to slug
     }
 }
 

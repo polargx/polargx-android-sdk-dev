@@ -33,7 +33,7 @@ interface ApiService {
 
     // -------------------- Links --------------------
 
-    suspend fun getLinkData(domain: String, slug: String): LinkDataModel?
+    suspend fun getLinkData(domain: String?, slug: String?): LinkDataModel?
 
     suspend fun trackLinkClick(request: TrackLinkClickRequest?): LinkClickModel?
 
@@ -42,10 +42,6 @@ interface ApiService {
     suspend fun matchLinkClick(fingerprint: String?): LinkClickModel?
 
     // -------------------- Other --------------------
-
-    suspend fun getClientInfo(): ClientInfoModel?
-
-    suspend fun getClientIP(): String?
 
     suspend fun isFirstTimeLaunch(context: Context?, nowInMillis: Long): Boolean
 }
