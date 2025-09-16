@@ -284,6 +284,11 @@ private class InternalPolarApp(
     }
 
     private suspend fun handleOpeningURL(subdomain: String?, slug: String?, clid: String?) {
+        if (subdomain.isNullOrEmpty() && slug.isNullOrEmpty()) {
+            mLastListener?.onInitFinished(null, null)
+            return
+        }
+
         val clickTime = DateTimeUtils.dateToString(
             Date(),
             Constants.DateTime.DEFAULT_DATE_FORMAT,
