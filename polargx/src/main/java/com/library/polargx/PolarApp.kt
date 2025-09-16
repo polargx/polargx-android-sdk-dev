@@ -2,6 +2,7 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -114,8 +115,7 @@ private class InternalPolarApp(
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
-            val (subdomain, slug) = getSubdomainAndSlug(uri)
-            handleOpeningURL(subdomain = subdomain, slug = slug, clid = null)
+            handleOpeningURL(uri)
         }
     }
 
@@ -126,8 +126,7 @@ private class InternalPolarApp(
         }
         mGetLinkJob = CoroutineScope(Dispatchers.IO).launch {
             mLastListener = listener
-            val (subdomain, slug) = getSubdomainAndSlug(uri)
-            handleOpeningURL(subdomain = subdomain, slug = slug, clid = null)
+            handleOpeningURL(uri)
         }
     }
 
@@ -314,11 +313,11 @@ private class InternalPolarApp(
                 additionalData = mapOf(),
             )
 
-            if (clid == null) {
-//                val linkClick = apiService.trackLinkClick(trackRequest)
-//                val clickUnid = linkClick?.unid
-//                val request = UpdateLinkClickRequest(sdkUsed = true)
-//                apiService.updateLinkClick(clickUnid, request)
+            if (clid.isNullOrEmpty()) {
+                val linkClick = apiService.trackLinkClick(trackRequest)
+                val clickUnid = linkClick?.unid
+                val request = UpdateLinkClickRequest(sdkUsed = true)
+                apiService.updateLinkClick(clickUnid, request)
             } else {
                 val request = UpdateLinkClickRequest(sdkUsed = true)
                 apiService.updateLinkClick(clid, request)

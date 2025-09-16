@@ -7,13 +7,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LinkDataModel(
     @SerialName("analyticsTags")
-    val analyticsTags: DictionaryModel?,
+    val analyticsTags: DictionaryModel? = null,
     @SerialName("socialMediaTags")
-    val socialMediaTags: DictionaryModel?,
+    val socialMediaTags: DictionaryModel? = null,
     @SerialName("data")
-    val data: DictionaryModel?,
+    val data: DictionaryModel? = null,
     @SerialName("slug")
-    val slug: String?,
+    val slug: String? = null,
     @SerialName("url")
-    val url: String?
+    val url: String? = null
 )
