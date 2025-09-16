@@ -36,6 +36,7 @@ import org.koin.core.component.inject
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
+import java.net.URI
 import java.util.Date
 import java.util.UUID
 
@@ -283,11 +284,6 @@ private class InternalPolarApp(
     }
 
     private suspend fun handleOpeningURL(subdomain: String?, slug: String?, clid: String?) {
-        if (subdomain.isNullOrEmpty() && slug.isNullOrEmpty()) {
-            mLastListener?.onInitFinished(null, null)
-            return
-        }
-
         val clickTime = DateTimeUtils.dateToString(
             Date(),
             Constants.DateTime.DEFAULT_DATE_FORMAT,
@@ -296,6 +292,13 @@ private class InternalPolarApp(
 
         try {
             mLastLink = apiService.getLinkData(domain = subdomain, slug = slug)
+
+            val linkUrl = getHttpsUrl(mLastLink?.url)
+            if (!validateSupportingURL(linkUrl)) {
+                mLastListener?.onInitFinished(null, null)
+                return
+            }
+
             val trackRequest = TrackLinkClickRequest(
                 domain = subdomain,
                 slug = slug,
@@ -315,12 +318,12 @@ private class InternalPolarApp(
                 val request = UpdateLinkClickRequest(sdkUsed = true)
                 apiService.updateLinkClick(clid, request)
             }
-            val link = "https://" + mLastLink?.url
-            onLinkClickHandler(link, mLastLink?.data?.content, null)
+
+            onLinkClickHandler(linkUrl, mLastLink?.data?.content, null)
             mLastListener?.onInitFinished(mLastLink?.data?.content, null)
         } catch (e: Exception) {
-            val link = "https://" + mLastLink?.url
-            onLinkClickHandler(link, null, e)
+            val linkUrl = getHttpsUrl(mLastLink?.url)
+            onLinkClickHandler(linkUrl, null, e)
             mLastListener?.onInitFinished(null, e)
         }
     }
@@ -402,6 +405,25 @@ private class InternalPolarApp(
                         "\nwindow.density=${density}" +
                         "\nwindow.densityDpi=${densityDpi}"
             )
+        }
+    }
+
+    private fun getHttpsUrl(url: String?): String? {
+        if (url.isNullOrEmpty()) return null
+        return if (!url.startsWith("http://") || !url.startsWith("https://")) {
+            "https://$url"
+        } else {
+            url
+        }
+    }
+
+    private fun validateSupportingURL(url: String?): Boolean {
+        return try {
+            val supportDomains = Configuration.Env.supportedBaseDomains
+            val host = URI(url).host ?: return false
+            host == supportDomains || host.endsWith(supportDomains)
+        } catch (e: Exception) {
+            false
         }
     }
 
