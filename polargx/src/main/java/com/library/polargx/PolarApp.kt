@@ -2,7 +2,6 @@ package com.library.polargx
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -429,14 +428,6 @@ private class InternalPolarApp(
         } catch (e: Exception) {
             false
         }
-    }
-
-    private fun getSubdomainAndSlug(uri: Uri?): Pair<String, String> {
-        val host = uri?.host ?: ""
-        val domainParts = host.split(".")
-        val subdomain = if (domainParts.size > 2) domainParts[0] else ""
-        val slug = uri?.lastPathSegment ?: ""
-        return subdomain to slug
     }
 }
 
