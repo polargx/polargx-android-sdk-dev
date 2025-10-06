@@ -40,8 +40,11 @@ import java.net.URI
 import java.util.Date
 import java.util.UUID
 
-typealias OnLinkClickHandler = (link: String?, data: Map<String, Any?>?, error: Exception?) -> Unit
 typealias UntrackedEvent = Triple<String, String, Map<String, Any?>>
+
+fun interface OnLinkClickHandler {
+    fun onLinkClick(link: String?, data: Map<String, Any?>?, error: Exception?)
+}
 
 private class InternalPolarApp(
     val appId: String,
@@ -322,11 +325,11 @@ private class InternalPolarApp(
                 apiService.updateLinkClick(clid, request)
             }
 
-            onLinkClickHandler(linkUrl, mLastLink?.data?.content, null)
+            onLinkClickHandler.onLinkClick(linkUrl, mLastLink?.data?.content, null)
             mLastListener?.onInitFinished(mLastLink?.data?.content, null)
         } catch (e: Exception) {
             val linkUrl = getHttpsUrl(mLastLink?.url)
-            onLinkClickHandler(linkUrl, null, e)
+            onLinkClickHandler.onLinkClick(linkUrl, null, e)
             mLastListener?.onInitFinished(null, e)
         }
     }
@@ -374,10 +377,10 @@ private class InternalPolarApp(
                     val request = UpdateLinkClickRequest(sdkUsed = true)
                     apiService.updateLinkClick(clid, request)
                 }
-                onLinkClickHandler(uri.toString(), mLastLink?.data?.content, null)
+                onLinkClickHandler.onLinkClick(uri.toString(), mLastLink?.data?.content, null)
                 mLastListener?.onInitFinished(mLastLink?.data?.content, null)
             } catch (e: Exception) {
-                onLinkClickHandler(uri.toString(), null, e)
+                onLinkClickHandler.onLinkClick(uri.toString(), null, e)
                 mLastListener?.onInitFinished(null, e)
             }
             return
@@ -457,6 +460,7 @@ open class PolarApp {
                 }
             }
 
+        @JvmStatic
         fun initialize(
             appId: String,
             apiKey: String,
