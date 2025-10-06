@@ -8,22 +8,17 @@ open class EnvConfiguration(
 
 class DevEnvConfiguration(
     override val name: String = "Development",
-    override val server: String = "lydxigat68.execute-api.us-east-1.amazonaws.com/dev",
-    override val supportedBaseDomains: String = ".makelabs.ai"
+    override val server: String = "8mr6rftgmb.execute-api.us-east-1.amazonaws.com/dev",
+    override val supportedBaseDomains: String = ".biglittlecookies.com"
 ) : EnvConfiguration(name, server, supportedBaseDomains)
 
 class ProdEnvConfiguration(
     override val name: String = "Production",
-    override val server: String = "lydxigat68.execute-api.us-east-1.amazonaws.com/prod",
+    override val server: String = "8mr6rftgmb.execute-api.us-east-1.amazonaws.com/prod",
     override val supportedBaseDomains: String = ".gxlnk.com"
 ) : EnvConfiguration(name, server, supportedBaseDomains)
 
 object Configuration {
-    const val Brand = "Polar"
-
-    val Env: EnvConfiguration = if (PolarApp.isDevelopmentEnabled) {
-        DevEnvConfiguration()
-    } else {
-        ProdEnvConfiguration()
-    }
+    const val BRAND = "Polar"
+    var Env: EnvConfiguration = ProdEnvConfiguration()
 }

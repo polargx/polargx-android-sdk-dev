@@ -1,11 +1,15 @@
 package com.library.polargx
 
 import com.library.polargx.api.ApiService
+import com.library.polargx.api.fcm_tokens.deregister.DeregisterFCMRequest
+import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
 import com.library.polargx.api.update_user.UpdateUserRequest
 import com.library.polargx.helpers.ApiError
 import com.library.polargx.helpers.Logger
-import com.library.polargx.models.UpdateUserModel
+import com.library.polargx.models.DeregisterFCMModel
 import com.library.polargx.models.TrackEventModel
+import com.library.polargx.models.RegisterFCMModel
+import com.library.polargx.models.UpdateUserModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -24,23 +28,44 @@ data class UserSession(
     val userID: String,
     val trackingFileStorage: File
 ) : KoinComponent {
-    private var attributes = mapOf<String, String>()
+
+    private var isValid = true
+
+    private var attributes = mapOf<String, Any?>()
+    private var pendingRegisterPushToken: String? = null
+    private var lastRegisteredFCMToken: String? = null
 
     private val trackingEventQueue by lazy { TrackingEventQueue(trackingFileStorage) }
 
     private val apiService by inject<ApiService>()
 
     companion object {
-        const val TAG = "UserSession"
+        const val TAG = ">>>Polar"
     }
 
     /**
      * Keep all user attributes for next sending. I don't make sure server supports to merging existing user attributes and the new attributes.
      */
-    fun setAttributes(newAttributes: Map<String, String>) {
+    suspend fun setAttributes(attrs: Map<String, Any?>) {
+        if (!isValid) return
+        attributes += attrs
+        startToUpdateUser()
+    }
+
+    suspend fun setPushToken(fcm: String?) {
+        if (!isValid) return
+        pendingRegisterPushToken = fcm
+        startToRegisterPushToken()
+    }
+
+    fun invalidate() {
+        if (!isValid) return
+        isValid = false
+
+        Logger.d(">>>Polar", "Invalidate user session: $userID")
+
         CoroutineScope(Dispatchers.IO).launch {
-            attributes += newAttributes
-            startToUpdateUser()
+            startToDeregisterPushToken()
         }
     }
 
@@ -58,11 +83,9 @@ data class UserSession(
                 val request = UpdateUserRequest.from(user)
                 apiService.updateUser(request)
             } catch (e: Exception) {
-                if (e is ApiError) {
-                    if (e.code == 403) {
-                        Logger.d(TAG, "UpdateUser: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
-                        submitError = null
-                    }
+                if (e is ApiError && e.code == 403) {
+                    Logger.d(TAG, "UpdateUser: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
+                    submitError = null
                 } else {
                     Logger.d(TAG, "UpdateUser: failed ⛔️ + retrying 🔁: $e")
                     delay(1000)
@@ -76,18 +99,85 @@ data class UserSession(
     }
 
     /**
+     * Stop sending retrying process if server returns status code #403
+     * Retry when network connection issue, server returns status code #400
+     */
+    private suspend fun startToRegisterPushToken() {
+        var submitError: Exception?
+
+        do {
+            try {
+                val registeringPushToken = pendingRegisterPushToken
+                if (registeringPushToken != null) {
+                    val fcm = RegisterFCMModel(organizationUnid, userID, registeringPushToken)
+                    val request = RegisterFCMRequest.from(fcm)
+                    apiService.registerFCM(request)
+                } else {
+                    lastRegisteredFCMToken = null
+                }
+
+                if (registeringPushToken == pendingRegisterPushToken) {
+                    pendingRegisterPushToken = null
+                }
+
+                submitError = null
+            } catch (e: Exception) {
+                if (e is ApiError && e.code == 403) {
+                    Logger.d(TAG, "RegisterPushToken: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
+                    submitError = null
+                } else {
+                    Logger.d(TAG, "RegisterPushToken: failed ⛔️ + retrying 🔁: $e")
+                    delay(1000)
+                    submitError = e
+                }
+            }
+        } while (submitError != null)
+
+        if (!isValid) {
+            startToDeregisterPushToken()
+        }
+    }
+
+    private suspend fun startToDeregisterPushToken() {
+        var submitError: Exception? = null
+
+        do {
+            try {
+                lastRegisteredFCMToken?.let { fcmToken ->
+                    val fcm = DeregisterFCMModel(organizationUnid, userID, fcmToken)
+                    val request = DeregisterFCMRequest.from(fcm)
+                    apiService.deregisterFCM(request)
+                    lastRegisteredFCMToken = null
+                }
+            } catch (e: Exception) {
+                if (e is ApiError && e.code == 403) {
+                    Logger.d(TAG, "DeregisterPushToken: ⛔⛔⛔ INVALID appId OR apiKey! ⛔⛔⛔")
+                    submitError = null
+                } else {
+                    Logger.d(TAG, "DeregisterPushToken: failed ⛔️ + retrying 🔁: $e")
+                    delay(1000)
+                    submitError = e
+                }
+            }
+        } while (submitError != null)
+    }
+
+    /**
      * Track event for user.
      */
-    suspend fun trackEvent(name: String?, date: String?, attributes: Map<String, String>?) {
-        trackingEventQueue.push(
-            TrackEventModel(
-                organizationUnid = organizationUnid,
-                userID = userID,
-                eventName = name,
-                eventTime = date,
-                data = attributes
+    suspend fun trackEvents(events: List<UntrackedEvent>) {
+        events.map { event ->
+            val (name, date, attributes) = event
+            trackingEventQueue.push(
+                TrackEventModel(
+                    organizationUnid = organizationUnid,
+                    userID = userID,
+                    eventName = name,
+                    eventTime = date,
+                    data = attributes
+                )
             )
-        )
+        }
         trackingEventQueue.sendEventsIfNeeded()
     }
 }

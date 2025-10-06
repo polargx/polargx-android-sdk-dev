@@ -37,7 +37,6 @@ class MyApplication : Application() {
     }
 
     private fun initData() {
-        PolarApp.isDevelopmentEnabled = true
         PolarApp.isLoggingEnabled = true
 
         PolarApp.initialize(

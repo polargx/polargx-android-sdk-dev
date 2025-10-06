@@ -9,11 +9,11 @@ class MainActivityViewModel : ViewModel() {
         const val TAG = ">>>MainActivityViewModel"
     }
 
-    fun onStartPolarInitFinished(attributes: Map<String, String>?, error: Throwable?) {
+    fun onStartPolarInitFinished(attributes: Map<String, Any?>?, error: Throwable?) {
         Log.d(TAG, "onStartPolarInitFinished: attributes=$attributes, error=$error")
     }
 
-    fun onNewIntentPolarInitFinished(attributes: Map<String, String>?, error: Throwable?) {
+    fun onNewIntentPolarInitFinished(attributes: Map<String, Any?>?, error: Throwable?) {
         Log.d(TAG, "onNewIntentPolarInitFinished: attributes=$attributes, error=$error")
     }
 

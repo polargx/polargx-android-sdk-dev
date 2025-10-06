@@ -1,10 +1,10 @@
 package com.library.polargx
 
 import com.library.polargx.api.ApiService
+import com.library.polargx.api.track_event.TrackEventRequest
 import com.library.polargx.helpers.ApiError
 import com.library.polargx.helpers.Logger
 import com.library.polargx.models.TrackEventModel
-import com.library.polargx.api.track_event.TrackEventRequest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
@@ -30,7 +30,7 @@ class TrackingEventQueue(val file: File) : KoinComponent {
         private set
 
     companion object {
-        const val TAG = "TrackingEventQueue"
+        const val TAG = ">>>Polar"
     }
 
     /**

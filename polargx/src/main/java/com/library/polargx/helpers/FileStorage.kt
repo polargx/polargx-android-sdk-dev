@@ -30,7 +30,7 @@ data class FileStorage(val file: File) {
         }
 
         fun getSDKDirectory(context: Context): FileStorage {
-            return getFilesDirDirectory(context).appendingSubDirectory(Configuration.Brand + "-aRDrdAOPcD")
+            return getFilesDirDirectory(context).appendingSubDirectory(Configuration.BRAND + "-aRDrdAOPcD")
         }
 
         private fun getFilesDirDirectory(context: Context): FileStorage {

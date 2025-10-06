@@ -95,7 +95,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 groupId = "com.github.infinitech-dev" // Replace with your GitHub username
                 artifactId = "polar-gx" // Replace with your library's name (e.g., my-awesome-library)
-                version = "1.0.9" // Initial version number (important!)
+                version = "1.1.1" // Initial version number (important!)
 
                 afterEvaluate {
                     from(components["release"])

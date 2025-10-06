@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import com.library.polargx.Constants
+import com.library.polargx.api.device_tokens.deregister.DeregisterDeviceTokenRequest
+import com.library.polargx.api.device_tokens.register.RegisterDeviceTokenRequest
+import com.library.polargx.api.fcm_tokens.deregister.DeregisterFCMRequest
+import com.library.polargx.api.fcm_tokens.register.RegisterFCMRequest
+import com.library.polargx.api.link_click.LinkClickResponse
 import com.library.polargx.api.link_data.LinkDataResponse
 import com.library.polargx.api.track_event.TrackEventRequest
 import com.library.polargx.api.track_link.TrackLinkClickRequest
@@ -29,9 +34,10 @@ class ApiServiceImpl(
     private val client: HttpClient,
     private val sf: SharedPreferences
 ) : ApiService {
+
     override suspend fun updateUser(request: UpdateUserRequest?) {
         val response = client.post {
-            url.path("sdk/v1/users/profileUpdate")
+            url.path("api/v1/users/profile")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -42,7 +48,7 @@ class ApiServiceImpl(
 
     override suspend fun trackEvent(request: TrackEventRequest?) {
         val response = client.post {
-            url.path("sdk/v1/events/track")
+            url.path("api/v1/events")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -51,22 +57,66 @@ class ApiServiceImpl(
         throw ApiError(response.bodyAsText())
     }
 
-    override suspend fun getLinkData(domain: String, slug: String): LinkDataModel? {
+    override suspend fun registerFCM(request: RegisterFCMRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/fcm-tokens/register")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun deregisterFCM(request: DeregisterFCMRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/fcm-tokens/deregister")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun registerDeviceToken(request: RegisterDeviceTokenRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/device-tokens/register")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun deregisterDeviceToken(request: DeregisterDeviceTokenRequest?) {
+        val response = client.post {
+            url.path("api/v1/users/device-tokens/deregister")
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun getLinkData(domain: String?, slug: String?): LinkDataModel? {
         val response = client.get {
-            url.path("sdk/v1/links/data")
+            url.path("api/v1/links/resolve")
             parameter("domain", domain)
             parameter("slug", slug)
         }
         if (response.status.isSuccess()) {
-            val body = response.body<LinkDataResponse?>()
-            return body?.data?.sdkLinkData
+            val body = response.body<LinkDataResponse>()
+            return body.data?.sdkLinkData
         }
         throw ApiError(response.bodyAsText())
     }
 
     override suspend fun trackLinkClick(request: TrackLinkClickRequest?): LinkClickModel? {
         val response = client.post {
-            url.path("sdk/v1/links/track")
+            url.path("api/v1/links/clicks")
             setBody(request)
         }
         if (response.status.isSuccess()) {
@@ -78,11 +128,23 @@ class ApiServiceImpl(
 
     override suspend fun updateLinkClick(clickUnid: String?, request: UpdateLinkClickRequest?) {
         val response = client.put {
-            url.path("sdk/v1/links/clicks/$clickUnid")
+            url.path("api/v1/links/clicks/$clickUnid")
             setBody(request)
         }
         if (response.status.isSuccess()) {
             return response.body()
+        }
+        throw ApiError(response.bodyAsText())
+    }
+
+    override suspend fun matchLinkClick(fingerprint: String?): LinkClickModel? {
+        val response = client.get {
+            url.path("api/v1/links/clicks/match")
+            parameter("fingerprint", fingerprint)
+        }
+        if (response.status.isSuccess()) {
+            val body = response.body<LinkClickResponse?>()
+            return body?.data?.linkClick
         }
         throw ApiError(response.bodyAsText())
     }
