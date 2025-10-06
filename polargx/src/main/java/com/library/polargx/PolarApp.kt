@@ -47,13 +47,13 @@ fun interface OnLinkClickHandler {
 }
 
 private class InternalPolarApp(
+    val application: Application,
     val appId: String,
     override var apiKey: String,
     val onLinkClickHandler: OnLinkClickHandler
 ) : PolarApp(), KoinComponent {
 
     private val apiService by inject<ApiService>()
-    private val application by inject<Application>()
 
     private val maxCapacity = 100
 
@@ -462,11 +462,13 @@ open class PolarApp {
 
         @JvmStatic
         fun initialize(
+            application: Application,
             appId: String,
             apiKey: String,
             onLinkClickHandler: OnLinkClickHandler
         ) {
             _shared = InternalPolarApp(
+                application = application,
                 appId = appId,
                 apiKey = apiKey,
                 onLinkClickHandler = onLinkClickHandler
