@@ -447,11 +447,13 @@ open class PolarApp {
     companion object {
         const val TAG = ">>>Polar"
 
+        @JvmStatic
         var isLoggingEnabled = false
 
         @Volatile
         private var _shared: PolarApp? = null
 
+        @JvmStatic
         val shared: PolarApp
             get() = _shared ?: synchronized(this) { // Ensure thread-safe
                 _shared ?: run {
